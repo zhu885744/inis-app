@@ -1,0 +1,116 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^wd-(.*)": "wot-design-uni/components/wd-$1/wd-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "首页",
+        "enablePullDownRefresh": true,
+        "onReachBottomDistance": 100,
+        "backgroundTextStyle": "dark"
+      }
+    },
+    {
+      "path": "pages/mall/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "商城",
+        "enablePullDownRefresh": true,
+        "onReachBottomDistance": 100
+      }
+    },
+    {
+      "path": "pages/message/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "消息",
+        "enablePullDownRefresh": true,
+        "onReachBottomDistance": 100
+      }
+    },
+    {
+      "path": "pages/captcha/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "安全验证"
+      }
+    },
+    {
+      "path": "pages/article/detail",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "文章详情"
+      }
+    },
+    {
+      "path": "pages/moment/detail",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "动态详情"
+      }
+    },
+    {
+      "path": "pages/search/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "搜索",
+        "onReachBottomDistance": 100
+      }
+    },
+    {
+      "path": "pages/user/author",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "主页",
+        "enablePullDownRefresh": true,
+        "onReachBottomDistance": 100
+      }
+    },
+    {
+      "path": "pages/user/follow",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "关注",
+        "onReachBottomDistance": 100
+      }
+    },
+    {
+      "path": "pages/mine/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "登录"
+      }
+    },
+    {
+      "path": "pages/register/index",
+      "style": {
+        "navigationBarTitleText": "注册"
+      }
+    },
+    {
+      "path": "pages/reset-password/index",
+      "style": {
+        "navigationBarTitleText": "重置密码"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "INIS",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f6f7f9"
+  },
+  "uniIdRouter": {}
+}

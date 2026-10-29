@@ -1,0 +1,21 @@
+/**
+ * uni.scss —— 会被 uni-app 自动注入到每个组件的样式里，无需手动 @import
+ * 只放全局设计变量（颜色 / 圆角 / 间距），具体样式写在组件里
+ */
+
+/* 主色：与后台 / Mellow 主题一致的朱砂 */
+$inis-primary: #c7482a;
+$inis-primary-light: #d9664c;
+$inis-primary-dark: #a3391f;
+
+/* 中性色 */
+$inis-text: #1f2937;
+$inis-text-secondary: #6b7280;
+$inis-text-muted: #9ca3af;
+$inis-border: #eef0f3;
+$inis-bg: #f6f7f9;
+
+/* 圆角与间距 */
+$inis-radius: 12rpx;
+$inis-radius-lg: 20rpx;
+$inis-gap: 24rpx;

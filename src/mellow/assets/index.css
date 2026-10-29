@@ -1,0 +1,55 @@
+/**
+ * Mellow 移植层的全局样式入口
+ *
+ * 三块内容，顺序不能乱：
+ *   1. bootstrap-icons —— Mellow 全站的 <i class="bi bi-xxx"> 图标字体
+ *   2. styles.css      —— Mellow 设计系统（token / reset / 组件类），从 Mellow 原样拷过来
+ *   3. 下面的补丁       —— 只为 uni-app（App + H5）运行环境做的差异修正
+ *
+ * styles.css 保持与 Mellow 逐字节一致，方便以后主题升级时直接整份覆盖；
+ * 任何 uni-app 特有改动都写在补丁区，不要改上面的原文。
+ */
+@import './bootstrap-icons.css';
+@import './styles.css';
+
+/* ==================== uni-app 适配补丁 ==================== */
+
+/**
+ * 页面根节点
+ * Mellow 把背景 / 文字色挂在 html, body 上；uni-app 的 App 端页面根节点是 <uni-page-body>，
+ * body 的背景色在部分机型上会被页面容器的白色底色盖住，这里补一层。
+ */
+page,
+uni-page-body {
+  background-color: var(--bg);
+  background-image: var(--gradient-page);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+/**
+ * uni-app 的 <image> 组件外层是 <uni-image>，内部才是真 <img>。
+ * Mellow 的 `img { max-width: 100%; display: block }` 管不到外层容器，头像之类的圆形裁切会失效。
+ */
+uni-image {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+uni-image > div,
+uni-image > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/**
+ * App 端（webview）没有浏览器地址栏，`100vh` 已正确；
+ * 但 H5 下 100vh 含地址栏高度，Mellow 的吸底容器（MobileTabBar）会被顶出可视区，
+ * 用 --window-bottom（uni 注入的安全区变量）兜一层。
+ */
+.mellow-tabbar,
+.mobile-tabbar {
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--window-bottom, 0px));
+}
