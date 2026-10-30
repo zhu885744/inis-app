@@ -1,21 +1,24 @@
 /**
  * uni.scss —— 会被 uni-app 自动注入到每个组件的样式里，无需手动 @import
  * 只放全局设计变量（颜色 / 圆角 / 间距），具体样式写在组件里
+ *
+ * 取值与 Mellow 主题的设计 token 对齐（见 src/mellow/assets/styles.css）：
+ * 暖纸为底、墨色为文、朱砂为印，保证 App 与网页端同一套观感。
  */
 
 /* 主色：与后台 / Mellow 主题一致的朱砂 */
 $inis-primary: #c7482a;
 $inis-primary-light: #d9664c;
-$inis-primary-dark: #a3391f;
+$inis-primary-dark: #a5371c;
 
-/* 中性色 */
-$inis-text: #1f2937;
-$inis-text-secondary: #6b7280;
-$inis-text-muted: #9ca3af;
-$inis-border: #eef0f3;
-$inis-bg: #f6f7f9;
+/* 中性色：纸面层级 + 墨色文字层级 */
+$inis-text: #322e26;
+$inis-text-secondary: #554e42;
+$inis-text-muted: #7b7361;
+$inis-border: #e2d9c8;
+$inis-bg: #f6f1e8;
 
-/* 圆角与间距 */
-$inis-radius: 12rpx;
-$inis-radius-lg: 20rpx;
+/* 圆角与间距：对齐 Mellow 的 6 / 8 / 10 / 14 / 18 圆角体系 */
+$inis-radius: 18rpx;
+$inis-radius-lg: 28rpx;
 $inis-gap: 24rpx;

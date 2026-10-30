@@ -12,9 +12,7 @@ onLaunch(() => {
 })
 </script>
 
-<!-- Mellow 移植层的全局样式（设计 token / 组件类 / 图标字体） -->
-<style src="./mellow/assets/index.css"></style>
-
+<!-- Mellow 移植层的全局样式在 main.ts 里 import（见那里的注释） -->
 <style lang="scss">
 /* 全局基础样式：uni.scss 里的变量由 uni-app 自动注入，可直接使用 */
 page {

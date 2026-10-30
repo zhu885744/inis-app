@@ -61,3 +61,31 @@ export function buyGoods(goodsId: number, address?: string) {
 export function getMyGoodsStats() {
   return http.get<GoodsStats>('/goods/my-stats', undefined, { auth: true, silent: true })
 }
+
+/** 我的兑换记录（需登录，支持 status / goods_id 过滤） */
+export interface GoodsOrderItem {
+  id: number
+  goods_id?: number
+  goods_title?: string
+  order_no?: string
+  price?: number
+  status?: number
+  deliver_content?: string
+  logistics?: string
+  refund?: number
+  create_time?: string
+  result?: {
+    goods?: GoodsItem
+    address?: { name?: string; phone?: string; address?: string }
+  }
+  [key: string]: any
+}
+
+export function getOrders(params: { page?: number; limit?: number; status?: number; goods_id?: number } = {}) {
+  const { page = 1, limit = 20, ...rest } = params
+  return http.get<PageResult<GoodsOrderItem>>(
+    '/goods/orders',
+    { page, limit, order: 'create_time desc', ...rest },
+    { auth: true, silent: true }
+  )
+}

@@ -210,8 +210,8 @@ onShareAppMessage(() => ({
   display: flex;
   align-items: center;
   padding: 16rpx 24rpx;
-  background: #ffffff;
-  border-bottom: 1px solid $inis-border;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-soft);
   padding-top: calc(16rpx + env(safe-area-inset-top));
 }
 </style>

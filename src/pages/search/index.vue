@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <view class="min-h-screen bg-page">
     <!-- 搜索栏 -->
     <view class="search-head">
@@ -469,7 +469,7 @@ onReachBottom(() => {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: #ffffff;
+  background: var(--bg-card);
   border-bottom: 1px solid $inis-border;
   padding-top: env(safe-area-inset-top);
 }

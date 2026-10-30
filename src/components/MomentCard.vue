@@ -1,48 +1,53 @@
 <template>
-  <view class="feed-card" @click="emit('click', moment.id)">
-    <!-- 作者行 -->
-    <view class="flex items-center gap-2">
-      <image class="h-9 w-9 flex-none rounded-full bg-gray-100" :src="authorAvatar" mode="aspectFill" />
-      <view class="min-w-0 flex-1">
-        <view class="flex items-center">
-          <text class="max-w-30 text-14px text-main font-medium ellipsis">{{ authorName }}</text>
+  <!-- 动态卡片：视觉对齐 Mellow 主题 components/MomentItem.vue -->
+  <view class="moment-card" @click="emit('click', moment.id)">
+    <view class="moment-head">
+      <image class="avatar" :src="authorAvatar" mode="aspectFill" />
+      <view class="info">
+        <view class="name">
+          <text class="name-link ellipsis">{{ authorName }}</text>
+          <text v-if="authorLevel" class="level-tag">Lv.{{ authorLevel }}</text>
           <TitleBadge :payload="titlePayload" :text="titleText" />
+          <text v-if="moment.top" class="top-tag">置顶</text>
         </view>
-        <text class="block text-11px text-weak">{{ timeText }}</text>
+        <view class="time">
+          <text>{{ timeText }}</text>
+        </view>
       </view>
-      <text v-if="moment.top" class="rounded-2 bg-primary/10 px-2 py-1 text-10px text-primary">置顶</text>
     </view>
 
-    <!-- 正文 -->
-    <text v-if="content" class="mt-2 block text-15px text-main">{{ content }}</text>
+    <text v-if="content" class="moment-content ellipsis-3">{{ content }}</text>
 
-    <!-- 图片九宫格（最多 9 张） -->
-    <view v-if="images.length" class="mt-3 flex flex-wrap gap-2">
+    <view v-if="images.length" class="moment-images" :class="images.length === 1 ? 'single' : 'multi'">
       <image
-        v-for="(image, index) in images.slice(0, visibleCount)"
+        v-for="(image, index) in shownImages"
         :key="index"
-        class="rounded-3 bg-gray-100"
-        :class="visibleCount === 1 ? 'h-52 w-full' : 'h-32 w-32'"
+        class="moment-img"
         :src="image"
         mode="aspectFill"
       />
     </view>
 
-    <!-- 互动栏 -->
-    <view class="mt-3 flex items-center">
-      <view class="flex items-center gap-1">
-        <wd-icon name="chat" :size="16" color="#9ca3af" />
-        <text class="text-12px text-weak">{{ formatCount(commentCount) }}</text>
+    <view v-if="moment.location" class="moment-loc">
+      <text class="bi bi-geo-alt" /> <text>{{ moment.location }}</text>
+    </view>
+
+    <view class="moment-actions">
+      <text class="kind-tag"><text class="bi bi-chat-square-text" /> 动态</text>
+      <view class="action-btns">
+        <text class="action-item">
+          <text class="bi bi-heart" />
+          <text>{{ formatCount(likeCount) }}</text>
+        </text>
+        <text class="action-item">
+          <text class="bi bi-chat-dots" />
+          <text>{{ formatCount(commentCount) }}</text>
+        </text>
+        <text class="action-item is-static">
+          <text class="bi bi-eye" />
+          <text>{{ formatCount(moment.views) }}</text>
+        </text>
       </view>
-      <view class="ml-5 flex items-center gap-1">
-        <wd-icon name="thumb-up" :size="16" color="#9ca3af" />
-        <text class="text-12px text-weak">{{ formatCount(likeCount) }}</text>
-      </view>
-      <view v-if="moment.location" class="ml-5 flex items-center gap-1">
-        <wd-icon name="location" :size="16" color="#9ca3af" />
-        <text class="max-w-30 text-12px text-weak ellipsis">{{ moment.location }}</text>
-      </view>
-      <text class="ml-auto text-12px text-weak">{{ formatCount(moment.views) }} 浏览</text>
     </view>
   </view>
 </template>
@@ -62,19 +67,183 @@ const emit = defineEmits<{
 }>()
 
 const author = computed(() => props.moment.result?.author)
-const authorName = computed(() => author.value?.nickname || '匿名用户')
+const authorName = computed(() => author.value?.nickname || '匿名')
 const authorAvatar = computed(() => author.value?.avatar || '')
+const authorLevel = computed(() => {
+  const level = (author.value as any)?.result?.level?.current?.value
+  return Number(level || 0) || ''
+})
 
 const titlePayload = computed(() => pickUserTitlePayload(author.value))
 const titleText = computed(() => pickUserTitleText(author.value))
 
 const content = computed(() => String(props.moment.content || '').trim())
 const images = computed(() => parseImageList(props.moment.images))
-const timeText = computed(() => formatTime(props.moment.create_time))
+/** 列表里最多展示 9 张图 */
+const shownImages = computed(() => images.value.slice(0, 9))
 
+const timeText = computed(() => formatTime(props.moment.create_time))
 const commentCount = computed(() => Number(props.moment.result?.comment?.count || 0))
 const likeCount = computed(() => Number(props.moment.result?.like?.length || 0))
-
-/** 单图铺满、多图走九宫格 */
-const visibleCount = computed(() => (images.value.length === 1 ? 1 : 9))
 </script>
+
+<style lang="scss" scoped>
+.moment-card {
+  padding: 18px;
+  margin-bottom: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+}
+
+.moment-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--bg-muted);
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.name-link {
+  max-width: 45%;
+}
+
+.level-tag {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  font-size: 11px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--primary-deep);
+}
+
+.top-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 3px;
+}
+
+.time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.moment-content {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.moment-images {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.moment-images.multi {
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 320px;
+}
+
+.moment-images.single {
+  grid-template-columns: 1fr;
+  max-width: 320px;
+}
+
+.moment-img {
+  width: 100%;
+  height: 100px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-muted);
+}
+
+.moment-images.single .moment-img {
+  height: 200px;
+}
+
+.moment-loc {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.moment-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-soft);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.kind-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  background: var(--bg-muted);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.action-btns {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: inherit;
+}
+
+.action-item .bi {
+  font-size: 15px;
+}
+
+.action-item.is-static {
+  color: var(--text-muted);
+}
+</style>

@@ -104,13 +104,19 @@
       "style": {
         "navigationBarTitleText": "重置密码"
       }
+    },
+    {
+      "path": "pages/agreement/index",
+      "style": {
+        "navigationBarTitleText": "用户协议"
+      }
     }
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "INIS",
-    "navigationBarBackgroundColor": "#ffffff",
-    "backgroundColor": "#f6f7f9"
+    "navigationBarBackgroundColor": "#fbf9f5",
+    "backgroundColor": "#f6f1e8"
   },
   "uniIdRouter": {}
 }

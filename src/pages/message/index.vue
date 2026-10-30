@@ -1,95 +1,88 @@
 <template>
-  <view class="min-h-screen bg-page">
-    <!-- 顶部标题栏 -->
-    <view class="fixed-head">
-      <view class="flex items-center px-4 pt-3 pb-3">
-        <text class="text-18px text-main font-semibold">消息</text>
-        <text v-if="userStore.isLogin && unread > 0" class="ml-2 rounded-full bg-primary px-2 py-1 text-10px text-white">
-          {{ unread > 99 ? '99+' : unread }}
-        </text>
-
-        <view v-if="userStore.isLogin" class="ml-auto flex items-center gap-4">
-          <text class="text-12px text-sub" @click="onReadAll">全部已读</text>
-          <text class="text-12px text-sub" @click="onClearRead">清空已读</text>
-        </view>
+  <view class="msg-page">
+    <!-- 顶部：标题 + 批量操作 -->
+    <view class="msg-head">
+      <view class="section-title">
+        <view class="title-bar" />
+        <text>消息通知</text>
+        <text v-if="userStore.isLogin && unread > 0" class="unread-pill">{{ unread > 99 ? '99+' : unread }}</text>
       </view>
-
-      <!-- 分类 -->
-      <scroll-view v-if="userStore.isLogin" scroll-x class="tab-scroll px-4 pb-2">
-        <view v-for="item in CHANNELS" :key="item.key" class="mr-5 inline-block" @click="switchChannel(item.key)">
-          <text class="text-14px" :class="channel === item.key ? 'text-main font-semibold' : 'text-sub'">
-            {{ item.label }}
-          </text>
-          <view v-if="channel === item.key" class="mx-auto mt-1 h-1 w-4 rounded-full bg-primary" />
-        </view>
-      </scroll-view>
+      <view v-if="userStore.isLogin" class="head-actions">
+        <text class="head-action" @click="onReadAll">全部已读</text>
+        <text class="head-action" @click="onClearRead">清空已读</text>
+      </view>
     </view>
 
-    <view class="px-3 pt-3 pb-30">
-      <!-- 未登录 -->
-      <view v-if="!userStore.isLogin" class="mt-10 flex-col-center">
-        <view class="flex-center mb-4 h-16 w-16 rounded-full bg-gray-100">
-          <wd-icon name="chat" :size="32" color="#c0c4cc" />
+    <!-- 分类：胶囊分段控件（与首页「发现」筛选同款） -->
+    <scroll-view v-if="userStore.isLogin" scroll-x class="channel-scroll">
+      <view class="feed-filter">
+        <view
+          v-for="item in CHANNELS"
+          :key="item.key"
+          class="feed-filter-item"
+          :class="{ 'is-active': channel === item.key }"
+          @click="switchChannel(item.key)"
+        >
+          <text>{{ item.label }}</text>
         </view>
-        <text class="text-14px text-sub">登录后查看你的消息</text>
-        <view class="mt-5">
-          <wd-button type="primary" size="small" @click="toLogin">立即登录</wd-button>
-        </view>
+      </view>
+    </scroll-view>
+
+    <!-- 未登录 -->
+    <view v-if="!userStore.isLogin" class="card card-pad guest">
+      <text class="bi bi-bell guest-icon" />
+      <text class="guest-text">登录后查看你的消息</text>
+      <view class="btn btn-sm btn-primary" @click="toLogin">立即登录</view>
+    </view>
+
+    <template v-else>
+      <view v-if="view.loading.value && !list.length" class="is-loading">
+        <text class="spinner" />
+        <text> 加载中…</text>
+      </view>
+
+      <view v-else-if="view.empty.value" class="card card-pad empty">
+        <text class="empty-icon">🔔</text>
+        <text>{{ channelLabel }}暂无消息</text>
       </view>
 
       <template v-else>
-        <view v-if="view.loading.value && !list.length" class="py-20 text-center">
-          <text class="text-12px text-weak">加载中…</text>
-        </view>
-
-        <view v-else-if="view.empty.value" class="mt-10 flex-col-center">
-          <view class="flex-center mb-4 h-16 w-16 rounded-full bg-gray-100">
-            <wd-icon name="notification" :size="32" color="#c0c4cc" />
-          </view>
-          <text class="text-14px text-sub">{{ channelLabel }}暂无消息</text>
-        </view>
-
-        <template v-else>
-          <view class="overflow-hidden rounded-3 bg-white">
-            <view
-              v-for="(item, index) in list"
-              :key="item.id"
-              class="flex items-start gap-3 px-4 py-3"
-              :class="{ 'border-t border-line': index > 0 }"
-              @click="openItem(item)"
-            >
-              <view class="relative flex-none">
-                <image
-                  v-if="fromUser(item).avatar"
-                  class="h-10 w-10 rounded-full bg-gray-100"
-                  :src="fromUser(item).avatar"
-                  mode="aspectFill"
-                />
-                <view v-else class="flex-center h-10 w-10 rounded-full" :style="{ background: typeMeta(item.type).bg }">
-                  <wd-icon :name="typeMeta(item.type).icon" :size="18" :color="typeMeta(item.type).color" />
-                </view>
-                <view
-                  v-if="!Number(item.is_read)"
-                  class="absolute top-0 right-0 h-2 w-2 rounded-full bg-primary"
-                />
+        <view class="msg-list">
+          <view
+            v-for="item in list"
+            :key="item.id"
+            class="msg-item"
+            :class="{ 'is-unread': !Number(item.is_read) }"
+            @click="openItem(item)"
+          >
+            <view class="msg-avatar-wrap">
+              <image
+                v-if="fromUser(item).avatar"
+                class="msg-avatar"
+                :src="fromUser(item).avatar"
+                mode="aspectFill"
+              />
+              <view v-else class="msg-icon" :style="{ background: typeMeta(item.type).bg }">
+                <text class="bi" :class="typeMeta(item.type).icon" :style="{ color: typeMeta(item.type).color }" />
               </view>
+              <view v-if="!Number(item.is_read)" class="msg-dot" />
+            </view>
 
-              <view class="min-w-0 flex-1">
-                <view class="flex items-center">
-                  <text class="text-14px text-main font-medium ellipsis">{{ item.title || typeMeta(item.type).label }}</text>
-                  <text class="ml-auto flex-none text-11px text-weak">{{ formatTime(item.create_time) }}</text>
-                </view>
-                <text class="mt-1 block text-12px text-sub leading-snug">{{ item.content || '' }}</text>
+            <view class="msg-body">
+              <view class="msg-row">
+                <text class="msg-title ellipsis">{{ item.title || typeMeta(item.type).label }}</text>
+                <text class="msg-time">{{ formatTime(item.create_time) }}</text>
               </view>
+              <text class="msg-content">{{ item.content || '' }}</text>
             </view>
           </view>
+        </view>
 
-          <view class="py-3 text-center" @click="pager.loadMore()">
-            <text class="text-12px text-primary">{{ view.loading.value ? '加载中…' : view.finished.value ? '没有更多了' : '加载更多' }}</text>
-          </view>
-        </template>
+        <view class="load-more" @click="pager.loadMore()">
+          <text>{{ view.loading.value ? '加载中…' : view.finished.value ? '没有更多了' : '加载更多' }}</text>
+        </view>
       </template>
-    </view>
+    </template>
 
     <AppTabBar current="message" />
   </view>
@@ -115,7 +108,7 @@ import { toast } from '@/utils/toast'
 import { toLogin } from '@/utils/nav'
 
 /**
- * 消息中心
+ * 消息中心（对齐 Mellow 主题 views/user/Notifications.vue 的信息层级）
  *
  * 后端没有长连接推送（见 docs/API docs/notification.md），所以：
  * - 进入页面（onShow）拉一次未读数
@@ -132,13 +125,13 @@ const CHANNELS: { key: NotificationChannel; label: string }[] = [
   { key: 'system', label: '系统' }
 ]
 
-/** 各类型图标 / 配色（与首页「金刚区」的口径一致） */
+/** 各类型图标 / 配色（与 Mellow 主题的语义色一致） */
 const TYPE_META: Record<string, { label: string; icon: string; color: string; bg: string }> = {
-  comment: { label: '评论', icon: 'chat', color: '#409eff', bg: 'rgba(64, 158, 255, 0.12)' },
-  like: { label: '点赞', icon: 'thumb-up', color: '#c7482a', bg: 'rgba(199, 72, 42, 0.1)' },
-  collect: { label: '收藏', icon: 'star', color: '#e6a23c', bg: 'rgba(230, 162, 60, 0.12)' },
-  follow: { label: '关注', icon: 'user-add', color: '#14b8a6', bg: 'rgba(20, 184, 166, 0.12)' },
-  system: { label: '系统', icon: 'notification', color: '#e6a23c', bg: 'rgba(230, 162, 60, 0.12)' }
+  comment: { label: '评论', icon: 'bi-chat-dots', color: '#4a90e2', bg: 'rgba(74, 144, 226, 0.12)' },
+  like: { label: '点赞', icon: 'bi-heart-fill', color: '#c7482a', bg: 'rgba(199, 72, 42, 0.1)' },
+  collect: { label: '收藏', icon: 'bi-star', color: '#c08a2e', bg: 'rgba(192, 138, 46, 0.12)' },
+  follow: { label: '关注', icon: 'bi-person-plus', color: '#2e7a5c', bg: 'rgba(46, 122, 92, 0.12)' },
+  system: { label: '系统', icon: 'bi-bell', color: '#c08a2e', bg: 'rgba(192, 138, 46, 0.12)' }
 }
 
 const channel = ref<NotificationChannel>('all')
@@ -162,9 +155,7 @@ const view = {
   finished: computed(() => pager.finished.value)
 }
 
-const channelLabel = computed(
-  () => CHANNELS.find((item) => item.key === channel.value)?.label || ''
-)
+const channelLabel = computed(() => CHANNELS.find((item) => item.key === channel.value)?.label || '')
 
 function typeMeta(type?: string) {
   return TYPE_META[String(type || 'system')] || TYPE_META.system
@@ -230,6 +221,7 @@ function onReadAll(): void {
   uni.showModal({
     title: '全部标记已读',
     content: '确定把所有未读消息标记为已读吗？',
+    confirmColor: '#c7482a',
     success: async (res) => {
       if (!res.confirm) return
       try {
@@ -248,6 +240,7 @@ function onClearRead(): void {
   uni.showModal({
     title: '清空已读',
     content: '将删除所有已读消息（未读消息保留），确定吗？',
+    confirmColor: '#c7482a',
     success: async (res) => {
       if (!res.confirm) return
       try {
@@ -278,17 +271,224 @@ onReachBottom(() => {
 </script>
 
 <style lang="scss" scoped>
-.fixed-head {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: #ffffff;
-  border-bottom: 1px solid $inis-border;
-  padding-top: constant(safe-area-inset-top);
-  padding-top: env(safe-area-inset-top);
+.msg-page {
+  min-height: 100vh;
+  padding: 14px 14px calc(76px + env(safe-area-inset-bottom));
+  padding-top: calc(14px + env(safe-area-inset-top));
+  background: var(--bg);
+  background-image: var(--gradient-page);
 }
 
-.tab-scroll {
+.msg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.title-bar {
+  width: 4px;
+  height: 20px;
+  margin-right: 10px;
+  border-radius: 2px;
+  background: var(--primary);
+}
+
+.unread-pill {
+  margin-left: 8px;
+  padding: 0 6px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  color: #fff;
+  background: var(--danger);
+  border-radius: 999px;
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.head-action {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.channel-scroll {
   white-space: nowrap;
+  margin-bottom: 12px;
+}
+
+/* 分段控件（与首页「发现」筛选完全同款） */
+.feed-filter {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--bg-muted);
+}
+
+.feed-filter-item {
+  padding: 3px 12px;
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.feed-filter-item.is-active {
+  color: #fff;
+  background: var(--primary);
+}
+
+.msg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.msg-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+}
+
+.msg-item.is-unread {
+  border-color: var(--accent-ring);
+  background: var(--bg-card);
+}
+
+.msg-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.msg-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-muted);
+}
+
+.msg-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 17px;
+}
+
+.msg-dot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 1.5px solid var(--bg-card);
+}
+
+.msg-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.msg-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.msg-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.msg-time {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-light);
+}
+
+.msg-content {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  word-break: break-word;
+}
+
+.is-loading,
+.load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.card-pad {
+  padding: 16px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.empty-icon {
+  font-size: 30px;
+  opacity: 0.6;
+}
+
+.guest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.guest-icon {
+  font-size: 30px;
+  color: var(--text-light);
+}
+
+.guest-text {
+  font-size: 14px;
+  color: var(--text-soft);
 }
 </style>

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <view class="article-page">
     <!-- 顶部导航：返回 / 分享（pages.json 里 navigationStyle: custom） -->
     <view class="nav-bar">
@@ -443,7 +443,7 @@ onShareAppMessage(() => ({
 <style lang="scss" scoped>
 .article-page {
   min-height: 100vh;
-  background: #ffffff;
+  background: var(--bg-card);
 }
 
 /* 顶部导航 */
@@ -454,7 +454,7 @@ onShareAppMessage(() => ({
   display: flex;
   align-items: center;
   padding: 12rpx 24rpx;
-  background: #ffffff;
+  background: var(--bg-card);
   padding-top: calc(12rpx + env(safe-area-inset-top));
 }
 
@@ -558,7 +558,7 @@ onShareAppMessage(() => ({
   width: 24rpx;
   height: 24rpx;
   background: #4b8bf5;
-  border: 3rpx solid #ffffff;
+  border: 3rpx solid var(--bg-card);
   border-radius: 50%;
 }
 
@@ -674,7 +674,7 @@ onShareAppMessage(() => ({
   gap: 20rpx;
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
-  background: #ffffff;
+  background: var(--bg-card);
   border-top: 1rpx solid $inis-border;
 }
 
@@ -686,7 +686,7 @@ onShareAppMessage(() => ({
   min-width: 0;
   height: 64rpx;
   padding: 0 24rpx;
-  background: #f5f6f8;
+  background: var(--bg);
   border-radius: 32rpx;
 }
 

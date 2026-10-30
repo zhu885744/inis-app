@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <view class="min-h-screen bg-page">
     <view class="nav-bar">
       <view class="flex-center h-8 w-8 rounded-full bg-gray-100" @click="back">
@@ -147,7 +147,7 @@ onReachBottom(() => {
   display: flex;
   align-items: center;
   padding: 16rpx 24rpx;
-  background: #ffffff;
+  background: var(--bg-card);
   border-bottom: 1px solid $inis-border;
   padding-top: calc(16rpx + env(safe-area-inset-top));
 }

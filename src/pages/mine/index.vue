@@ -1,109 +1,167 @@
 <template>
   <view class="mine-page">
-    <!-- 资料卡 -->
-    <view class="card profile-card">
-      <view class="profile-top" @click="onProfileTap">
-        <image v-if="userStore.isLogin" class="avatar" :src="avatar" mode="aspectFill" />
-        <view v-else class="avatar avatar-empty">
-          <wd-icon name="user" :size="26" color="#c0c4cc" />
+    <view class="my">
+      <!-- 资料卡：昵称可进个人主页；右侧签到 -->
+      <view class="my-profile">
+        <view class="my-profile-top">
+          <image class="my-avatar" :src="avatar" mode="aspectFill" @click="goAuthor" />
+          <view class="my-profile-text" @click="goAuthor">
+            <view class="my-nickname">
+              <text class="my-nickname-text">{{ nickname }}</text>
+              <text v-if="uid" class="bi bi-chevron-right" />
+            </view>
+            <text class="my-sub">{{ subTitle }}</text>
+          </view>
+          <view
+            v-if="checkinEnabled && userStore.isLogin"
+            class="btn btn-sm"
+            :class="checked ? 'btn-ghost is-disabled' : 'btn-primary'"
+            @click="onSignIn"
+          >
+            <text>{{ checked ? '已签到' : signing ? '签到中…' : '签到' }}</text>
+          </view>
         </view>
 
-        <view class="min-w-0 flex-1">
-          <text class="profile-name ellipsis">{{ userStore.isLogin ? nickname : '登录 / 注册' }}</text>
-          <text class="profile-sub ellipsis">{{ subText }}</text>
+        <!-- 三格概览：积分 / 经验 / 今日任务 -->
+        <view class="my-stats">
+          <view class="my-stat" @click="goMall">
+            <text class="my-stat-label">积分</text>
+            <text class="my-stat-value">{{ integral }}</text>
+          </view>
+          <view class="my-stat" @click="goAuthor">
+            <text class="my-stat-label">经验</text>
+            <text class="my-stat-value">{{ exp }}</text>
+          </view>
+          <view class="my-stat" @click="goMall">
+            <text class="my-stat-label">今日任务</text>
+            <text class="my-stat-value">{{ tasks.done_count }}/{{ tasks.total_count }}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 未读消息 -->
+      <view class="my-notice" @click="goMessage">
+        <view class="my-notice-icon">
+          <text class="bi bi-bell-fill" />
+          <view v-if="notifCount > 0" class="my-notice-dot" />
+        </view>
+        <text class="my-notice-text">
+          {{ notifCount > 0 ? `${notifCount} 条未读消息` : '暂无未读消息' }}
+        </text>
+        <text class="bi bi-chevron-right my-arrow" />
+      </view>
+
+      <!-- 常用入口（可编辑：隐藏 / 恢复，记在本地） -->
+      <view class="my-card">
+        <view class="my-card-head">
+          <text class="my-card-title">常用</text>
+          <text class="my-link" @click="editing = !editing">{{ editing ? '完成' : '编辑' }}</text>
         </view>
 
-        <view
-          v-if="userStore.isLogin"
-          class="sign-btn"
-          :class="{ 'is-done': checked }"
-          @click.stop="onSign"
-        >
-          <text class="sign-text">{{ checked ? '已签到' : '签到' }}</text>
+        <view class="my-grid">
+          <view
+            v-for="item in visibleShortcuts"
+            :key="item.key"
+            class="my-grid-item"
+            :class="{ 'is-editing': editing }"
+            @click="onShortcutTap(item)"
+          >
+            <view class="my-grid-icon"><text class="bi" :class="item.icon" /></view>
+            <text class="my-grid-label">{{ item.name }}</text>
+            <view v-if="editing" class="my-grid-badge"><text class="bi bi-dash" /></view>
+          </view>
+        </view>
+
+        <template v-if="editing && hiddenShortcuts.length">
+          <text class="my-tip">已隐藏（点一下加回来）</text>
+          <view class="my-grid">
+            <view
+              v-for="item in hiddenShortcuts"
+              :key="item.key"
+              class="my-grid-item is-hidden"
+              @click="toggleShortcut(item)"
+            >
+              <view class="my-grid-icon"><text class="bi" :class="item.icon" /></view>
+              <text class="my-grid-label">{{ item.name }}</text>
+              <view class="my-grid-badge is-add"><text class="bi bi-plus" /></view>
+            </view>
+          </view>
+        </template>
+      </view>
+
+      <!-- 最近使用（点过的入口按时间倒序，最多 5 个） -->
+      <view v-if="recent.length" class="my-card">
+        <view class="my-card-head">
+          <view class="my-card-title">
+            <text>最近使用</text>
+            <text class="my-card-sub">最近打开过的功能</text>
+          </view>
+        </view>
+        <view class="my-grid">
+          <view v-for="item in recent" :key="`recent-${item.key}`" class="my-grid-item" @click="onShortcutTap(item)">
+            <view class="my-grid-icon"><text class="bi" :class="item.icon" /></view>
+            <text class="my-grid-label">{{ item.name }}</text>
+          </view>
         </view>
       </view>
 
-      <view v-if="userStore.isLogin" class="stat-row">
-        <view class="stat-cell">
-          <text class="stat-label">积分</text>
-          <text class="stat-value">{{ formatCount(integral) }}</text>
+      <!-- 等级 / 账号安全 -->
+      <view class="my-cards">
+        <view class="my-card my-mini" @click="goAuthor">
+          <view class="my-mini-head">
+            <text class="bi bi-stars" />
+            <text>等级</text>
+          </view>
+          <text class="my-mini-value">{{ levelText }}</text>
+          <view class="my-bar"><view class="my-bar-inner" :style="{ width: `${expPercent}%` }" /></view>
+          <text class="my-mini-hint">{{ levelHint }}</text>
         </view>
-        <view class="stat-cell">
-          <text class="stat-label">经验</text>
-          <text class="stat-value">{{ formatCount(exp) }}</text>
-        </view>
-        <view class="stat-cell">
-          <text class="stat-label">文章</text>
-          <text class="stat-value">{{ formatCount(contentCount) }}</text>
-        </view>
-      </view>
-    </view>
 
-    <!-- 消息条 -->
-    <view v-if="userStore.isLogin" class="card msg-bar" @click="toMessage">
-      <wd-icon name="notification" :size="17" color="#4b5563" />
-      <view v-if="unread > 0" class="msg-dot" />
-      <text class="msg-text">{{ unread > 0 ? `${unread} 条未读消息` : '暂无未读消息' }}</text>
-      <wd-icon name="chevron-right" :size="14" color="#c0c4cc" />
-    </view>
-
-    <!-- 常用 -->
-    <view class="card section">
-      <view class="section-head">
-        <text class="section-title">常用</text>
-        <text class="section-link" @click="onEditCommon">编辑</text>
-      </view>
-
-      <view class="grid">
-        <view v-for="item in COMMON" :key="item.key" class="grid-item" @click="openService(item)">
-          <wd-icon :name="item.icon" :size="24" color="#374151" />
-          <text class="grid-label">{{ item.label }}</text>
+        <view class="my-card my-mini" @click="goSecurity">
+          <view class="my-mini-head">
+            <text class="bi bi-shield-lock" />
+            <text>账号安全</text>
+          </view>
+          <text class="my-mini-value">{{ securityValue }}</text>
+          <text class="my-mini-hint">{{ securityHint }}</text>
         </view>
       </view>
-    </view>
 
-    <!-- 最近使用（记录的是真正打开过的服务） -->
-    <view v-if="recentServices.length" class="card section">
-      <view class="section-head">
-        <text class="section-title">最近使用</text>
-        <text class="section-desc">最近打开过的服务</text>
-      </view>
-
-      <view class="grid grid-5">
-        <view v-for="item in recentServices" :key="item.key" class="grid-item" @click="openService(item)">
-          <wd-icon :name="item.icon" :size="23" color="#374151" />
-          <text class="grid-label">{{ item.label }}</text>
+      <!-- 今日任务（取前 3 条） -->
+      <view v-if="taskList.length" class="my-card">
+        <view class="my-card-head">
+          <view class="my-card-title">
+            <text>今日任务</text>
+            <text class="my-card-sub">已完成 {{ tasks.done_count }}/{{ tasks.total_count }}</text>
+          </view>
+        </view>
+        <view class="my-tasks">
+          <view v-for="task in taskList.slice(0, 3)" :key="task.type" class="my-task" :class="{ 'is-done': task.done }">
+            <text class="bi" :class="task.done ? 'bi-check-circle-fill' : 'bi-circle'" />
+            <text class="my-task-name">{{ task.name }}</text>
+            <text class="my-task-value">{{ task.done ? '已完成' : Number(task.remain) > 0 ? `+${task.remain}` : '可继续' }}</text>
+          </view>
         </view>
       </view>
-    </view>
 
-    <!-- 等级 / 会员 -->
-    <view class="duo-row">
-      <view class="card duo-card" @click="openService(SERVICE_MAP.level)">
-        <view class="duo-head">
-          <wd-icon name="chart" :size="15" color="#4b5563" />
-          <text class="duo-title">等级</text>
+      <!-- 协议 / 账号 -->
+      <view class="my-links">
+        <view class="my-link-item" @click="openAgreement('user')">
+          <text class="bi bi-file-earmark-text" />
+          <text class="my-link-item-text">用户协议</text>
+          <text class="bi bi-chevron-right my-arrow" />
         </view>
-        <text class="duo-value">{{ levelName || '未登录' }}</text>
-        <view class="progress">
-          <view class="progress-inner" :style="{ width: `${levelPercent}%` }" />
+        <view class="my-link-item" @click="openAgreement('privacy')">
+          <text class="bi bi-shield-check" />
+          <text class="my-link-item-text">隐私协议</text>
+          <text class="bi bi-chevron-right my-arrow" />
         </view>
-        <text class="duo-hint">{{ levelHint }}</text>
+        <view v-if="userStore.isLogin" class="my-link-item is-danger" @click="onLogout">
+          <text class="bi bi-box-arrow-right" />
+          <text class="my-link-item-text">退出登录</text>
+          <text class="bi bi-chevron-right my-arrow" />
+        </view>
       </view>
-
-      <view class="card duo-card" @click="openService(SERVICE_MAP.member)">
-        <view class="duo-head">
-          <wd-icon name="star-filled" :size="15" color="#4b5563" />
-          <text class="duo-title">会员</text>
-        </view>
-        <text class="duo-value">尚未开通</text>
-        <text class="duo-hint">开通后可使用会员权益</text>
-      </view>
-    </view>
-
-    <!-- 退出登录 -->
-    <view v-if="userStore.isLogin" class="logout-btn" @click="onLogout">
-      <text class="logout-text">退出登录</text>
     </view>
 
     <AppTabBar current="mine" />
@@ -111,136 +169,204 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import AppTabBar from '@/components/AppTabBar.vue'
 import { getCheckinStatus, signIn, type CheckinStatus } from '@/api/checkin'
-import { getSocialStats } from '@/api/follow'
 import { getUnreadCount } from '@/api/notification'
-import type { SocialStats } from '@/api/types'
+import { getIntegral, getIntegralTasks, type IntegralTaskItem } from '@/api/integral'
 import { useUserStore } from '@/stores/user'
-import {
-  clearRecentServices,
-  getRecentServices,
-  pushRecentService
-} from '@/utils/storage'
 import { formatCount } from '@/utils/helper'
 import { toast } from '@/utils/toast'
 import { toLogin } from '@/utils/nav'
 
 /**
- * 个人中心（服务枢纽版）
+ * 「我的」聚合页（对齐 Mellow 主题 views/user/Index.vue）
  *
- * 版式（参考移动端社区 App）：搜索 → 资料卡（签到 / 金币 / 经验 / 内容）→ 消息条
- * → 常用九宫格 → 最近使用 → 等级 / 会员双卡。
+ * 定位与网页端一致：以导航入口 + 信息展示为主，不做复杂表单。
+ * 版式：资料卡（签到 / 积分 / 经验 / 今日任务）→ 未读消息 → 常用宫格（可编辑）
+ * → 最近使用 → 等级 / 账号安全 → 今日任务 → 协议入口。
  *
- * 数据来源（全部是真实接口 / 本地登录态，不编数字）：
- * - 昵称 / 头像 / 金币(integral) / 经验(exp) / 等级(result.level)：本地登录态（登录与 check-token 写入）
- * - 签到状态与连续天数：checkin/status；点「签到」调 checkin/sign
- * - 内容数：user-follows/stats 的 动态 + 文章
- * - 未读消息：notification/unread-count
- * - 最近使用：本地记录（只有真正打开了目的地的服务才会进这个列表）
- *
- * 与参考图的差异：参考图有「今日任务 x/5」，后端没有任务模块（只有签到 → 经验/积分），
- * 所以第三格改成了「内容」；会员卡保留「尚未开通」的空态（站点暂无会员体系）。
+ * 「常用」的显示项与「最近使用」都存本地，属于纯前端偏好，不落库。
  */
-interface ServiceItem {
+
+interface ShortcutItem {
   key: string
-  label: string
+  name: string
   icon: string
-  /** 已实现的目的地（内容中心要拼当前用户 id，在 openService 里生成） */
-  path?: string
+  /** 目标页面（发布动态之类没有页面的入口用 action） */
+  to?: string
+  action?: 'compose' | 'checkin'
+  /** 免登录即可访问（搜索 / 商城） */
+  public?: boolean
 }
+
+const SHORTCUTS_STORE = 'inis_my_shortcuts'
+const RECENT_STORE = 'inis_my_recent'
+const RECENT_MAX = 5
+const DEFAULT_VISIBLE = 8
+
+/** 全部可放进「常用」的入口（只放 App 内真实存在的页面） */
+const CATALOGUE: ShortcutItem[] = [
+  { key: 'moment-new', name: '发布动态', icon: 'bi-chat-square-text', action: 'compose' },
+  { key: 'author', name: '我的主页', icon: 'bi-person-badge', to: '/pages/user/author' },
+  { key: 'follow', name: '我的关注', icon: 'bi-people', to: '/pages/user/follow' },
+  { key: 'search', name: '搜索', icon: 'bi-search', to: '/pages/search/index', public: true },
+  { key: 'goods', name: '积分商城', icon: 'bi-shop', to: '/pages/mall/index', public: true },
+  { key: 'decoration-shop', name: '装扮商城', icon: 'bi-palette', to: '/pages/mall/index?tab=decoration', public: true },
+  { key: 'notifications', name: '消息通知', icon: 'bi-bell', to: '/pages/message/index' },
+  { key: 'checkin', name: '每日签到', icon: 'bi-calendar-check', action: 'checkin' }
+]
 
 const userStore = useUserStore()
 
-const stats = ref<SocialStats | null>(null)
+const uid = computed(() => Number(userStore.user?.id || 0))
+const nickname = computed(() => userStore.nickname)
+const avatar = computed(() => userStore.avatar)
+
+/* ---------------- 数据 ---------------- */
+const summary = ref<Record<string, any>>({})
+const tasks = reactive<{ list: IntegralTaskItem[]; done_count: number; total_count: number }>({
+  list: [],
+  done_count: 0,
+  total_count: 0
+})
 const checkin = ref<CheckinStatus | null>(null)
-const unread = ref(0)
-const recentKeys = ref<string[]>(getRecentServices())
+const notifCount = ref(0)
 const signing = ref(false)
 
-const SERVICES: ServiceItem[] = [
-  { key: 'publish', label: '发布动态', icon: 'edit' },
-  { key: 'content', label: '内容中心', icon: 'list' },
-  { key: 'task', label: '任务中心', icon: 'check' },
-  { key: 'member', label: '会员中心', icon: 'star-filled' },
-  { key: 'verify', label: '认证中心', icon: 'lock-on' },
-  { key: 'promote', label: '推广中心', icon: 'refresh' },
-  { key: 'wallet', label: '我的钱包', icon: 'wallet' },
-  { key: 'shop', label: '商城', icon: 'shop' },
-  { key: 'level', label: '等级中心', icon: 'chart' }
-]
-
-/** 常用：参考图的第一屏 8 个入口 */
-const COMMON = SERVICES.filter((item) => item.key !== 'level')
-
-const SERVICE_MAP = Object.fromEntries(SERVICES.map((item) => [item.key, item])) as Record<string, ServiceItem>
-
-const uid = computed(() => Number(userStore.user?.id || 0))
-const avatar = computed(() => String(userStore.user?.avatar || ''))
-const nickname = computed(() => String(userStore.user?.nickname || userStore.user?.account || '未登录'))
-
-const integral = computed(() => Number(userStore.user?.integral || 0))
+const integral = computed(() => formatCount(Number(summary.value.integral ?? userStore.user?.integral ?? 0)))
 const exp = computed(() => Number(userStore.user?.exp || 0))
-const contentCount = computed(() => Number(stats.value?.moment || 0) + Number(stats.value?.article || 0))
+const taskList = computed(() => tasks.list || [])
 
+const checkinEnabled = computed(() => checkin.value?.enabled !== false)
 const checked = computed(() => Boolean(checkin.value?.checked))
-const streak = computed(() => Number(checkin.value?.streak || 0))
 
 /** 等级：后端 result.level.current / next */
 const levelCurrent = computed<any>(() => userStore.user?.result?.level?.current || null)
 const levelNext = computed<any>(() => userStore.user?.result?.level?.next || null)
+const levelValue = computed(() => Number(levelCurrent.value?.value || 0))
+const levelText = computed(() => (levelValue.value ? `Lv.${levelValue.value}` : '—'))
 
-const levelName = computed(() => {
-  if (!userStore.isLogin) return ''
-  const current = levelCurrent.value
-  if (!current) return '未定级'
-  return String(current.name || current.text || (current.value ? `Lv.${current.value}` : '') || '未定级')
-})
-
-/** 升级进度：当前经验在「本级门槛 ~ 下一级门槛」之间的百分比 */
-const levelPercent = computed(() => {
-  const current = levelCurrent.value
-  const next = levelNext.value
-  if (!current || !next) return userStore.isLogin ? 100 : 0
-
-  const from = Number(current.exp || 0)
-  const to = Number(next.exp || 0)
-  if (to <= from) return 100
-
-  const percent = ((exp.value - from) / (to - from)) * 100
-  return Math.min(100, Math.max(0, Math.round(percent)))
+const expPercent = computed(() => {
+  const cur = Number(levelCurrent.value?.exp || 0)
+  const next = Number(levelNext.value?.exp || 0)
+  if (!next || next <= cur) return 100
+  const percent = ((exp.value - cur) / (next - cur)) * 100
+  return Math.max(0, Math.min(100, Math.round(percent)))
 })
 
 const levelHint = computed(() => {
-  if (!userStore.isLogin) return '登录后查看等级'
-  const next = levelNext.value
-  if (!next) return '已达最高等级'
-  const remain = Number(next.exp || 0) - exp.value
-  return remain > 0 ? `还差 ${formatCount(remain)} 经验升级` : '可以升级了'
+  const next = Number(levelNext.value?.exp || 0)
+  if (!next) return '已是最高等级'
+  const gap = Math.max(0, next - exp.value)
+  return gap > 0 ? `还差 ${gap} 经验升级` : '可以升级了'
 })
 
-/** 副标题：等级 + 连续签到（未登录是引导文案） */
-const subText = computed(() => {
-  if (!userStore.isLogin) return '登录后同步内容、资产与会员权益'
-
+const subTitle = computed(() => {
+  if (!userStore.isLogin) return '登录后同步内容、积分与消息'
   const parts: string[] = []
-  if (levelName.value) parts.push(levelName.value)
-  if (streak.value > 0) parts.push(`${checked.value ? '已' : ''}连续签到 ${streak.value} 天`)
-  if (!parts.length) parts.push(String(userStore.user?.description || '还没有填写个性签名'))
-  return parts.join(' · ')
+  if (levelValue.value) parts.push(`Lv.${levelValue.value}`)
+  const streak = Number(checkin.value?.streak || 0)
+  if (streak > 0) parts.push(`已连续签到 ${streak} 天`)
+  return parts.join(' · ') || '欢迎回来'
 })
 
-/** 最近使用：把本地记录的 key 映射成服务项（找不到的 key 直接丢弃） */
-const recentServices = computed(() =>
-  recentKeys.value.map((key) => SERVICE_MAP[key]).filter((item): item is ServiceItem => Boolean(item))
+const securityValue = computed(() => (userStore.user?.email ? '已绑定' : '未绑定'))
+const securityHint = computed(() => {
+  const bound: string[] = []
+  if (userStore.user?.email) bound.push('邮箱')
+  if (userStore.user?.phone) bound.push('手机号')
+  return bound.length ? `已绑定 ${bound.join(' / ')}` : '建议绑定邮箱与手机号'
+})
+
+/* ---------------- 常用 / 最近使用（本地偏好） ---------------- */
+const visibleKeys = ref<string[]>([])
+const recentKeys = ref<string[]>([])
+const editing = ref(false)
+
+function readStorage(key: string): any {
+  try {
+    return uni.getStorageSync(key) || null
+  } catch {
+    return null
+  }
+}
+
+function writeStorage(key: string, value: any): void {
+  try {
+    uni.setStorageSync(key, value)
+  } catch {
+    // 存储失败不影响本次会话
+  }
+}
+
+function loadShortcutKeys(): void {
+  const raw = readStorage(SHORTCUTS_STORE)
+  const list = Array.isArray(raw) ? raw : []
+  const valid = list.filter((key: string) => CATALOGUE.some((item) => item.key === key))
+  visibleKeys.value = valid.length ? valid : CATALOGUE.slice(0, DEFAULT_VISIBLE).map((item) => item.key)
+}
+
+function saveShortcutKeys(): void {
+  writeStorage(SHORTCUTS_STORE, visibleKeys.value)
+}
+
+const visibleShortcuts = computed(() =>
+  visibleKeys.value.map((key) => CATALOGUE.find((item) => item.key === key)).filter(Boolean) as ShortcutItem[]
+)
+const hiddenShortcuts = computed(() => CATALOGUE.filter((item) => !visibleKeys.value.includes(item.key)))
+
+function toggleShortcut(item: ShortcutItem): void {
+  if (visibleKeys.value.includes(item.key)) {
+    visibleKeys.value = visibleKeys.value.filter((key) => key !== item.key)
+  } else {
+    visibleKeys.value = [...visibleKeys.value, item.key]
+  }
+  saveShortcutKeys()
+}
+
+function loadRecent(): void {
+  const raw = readStorage(RECENT_STORE)
+  const list = Array.isArray(raw) ? raw : []
+  recentKeys.value = list.filter((key: string) => CATALOGUE.some((item) => item.key === key)).slice(0, RECENT_MAX)
+}
+
+const recent = computed(() =>
+  recentKeys.value.map((key) => CATALOGUE.find((item) => item.key === key)).filter(Boolean) as ShortcutItem[]
 )
 
-/** 服务的目的地：只有这些是已实现的 */
-function resolveServicePath(key: string): string {
-  if (key === 'content') return uid.value > 0 ? `/pages/user/author?id=${uid.value}` : ''
-  return ''
+function pushRecent(item: ShortcutItem): void {
+  const next = [item.key, ...recentKeys.value.filter((key) => key !== item.key)].slice(0, RECENT_MAX)
+  recentKeys.value = next
+  writeStorage(RECENT_STORE, next)
+}
+
+/* ---------------- 交互 ---------------- */
+function withUid(path: string): string {
+  if (!path.includes('?')) return uid.value > 0 ? `${path}?id=${uid.value}` : path
+  return uid.value > 0 ? `${path}&id=${uid.value}` : path
+}
+
+function onShortcutTap(item: ShortcutItem): void {
+  if (editing.value) {
+    toggleShortcut(item)
+    return
+  }
+  if (!item.public && !ensureLogin()) return
+
+  if (item.action === 'compose') {
+    toast('发布功能开发中')
+    return
+  }
+  if (item.action === 'checkin') {
+    onSignIn()
+    return
+  }
+  if (!item.to) return
+
+  pushRecent(item)
+  uni.navigateTo({ url: withUid(item.to) })
 }
 
 function ensureLogin(): boolean {
@@ -249,50 +375,59 @@ function ensureLogin(): boolean {
   return false
 }
 
-function openService(item: ServiceItem | undefined): void {
-  if (!item) return
-  if (!ensureLogin()) return
-
-  const path = item.path || resolveServicePath(item.key)
-  if (!path) {
-    // 目的地还没做：如实提示，不伪造数据
-    toast(`${item.label}开发中`)
-    return
-  }
-
-  // 只记录真正打开过的服务，最近使用才有意义
-  recentKeys.value = pushRecentService(item.key)
-  uni.navigateTo({ url: path })
-}
-
-function onProfileTap(): void {
+function goAuthor(): void {
   if (!ensureLogin()) return
   uni.navigateTo({ url: `/pages/user/author?id=${uid.value}` })
 }
 
-function onEditCommon(): void {
-  toast('常用功能编辑开发中')
+function goMall(): void {
+  uni.reLaunch({ url: '/pages/mall/index' })
 }
 
-function toSearch(): void {
-  uni.navigateTo({ url: '/pages/search/index' })
-}
-
-function toMessage(): void {
+function goMessage(): void {
   if (!ensureLogin()) return
-  uni.navigateTo({ url: '/pages/message/index' })
+  uni.reLaunch({ url: '/pages/message/index' })
 }
 
-async function loadStats(): Promise<void> {
+function goSecurity(): void {
+  if (!ensureLogin()) return
+  uni.navigateTo({ url: '/pages/reset-password/index' })
+}
+
+function openAgreement(type: 'user' | 'privacy'): void {
+  uni.navigateTo({ url: `/pages/agreement/index?type=${type}` })
+}
+
+/* ---------------- 加载 ---------------- */
+async function loadSummary(): Promise<void> {
   if (!userStore.isLogin) {
-    stats.value = null
+    summary.value = {}
     return
   }
   try {
-    // 不传 uid：后端取当前登录用户
-    stats.value = await getSocialStats()
+    const result = await getIntegral()
+    summary.value = result || {}
   } catch {
-    stats.value = null
+    summary.value = {}
+  }
+}
+
+async function loadTasks(): Promise<void> {
+  if (!userStore.isLogin) {
+    tasks.list = []
+    tasks.done_count = 0
+    tasks.total_count = 0
+    return
+  }
+  try {
+    const result: any = await getIntegralTasks()
+    tasks.list = Array.isArray(result?.list) ? result.list : []
+    tasks.done_count = Number(result?.done_count || 0)
+    tasks.total_count = Number(result?.total_count || 0)
+  } catch {
+    tasks.list = []
+    tasks.done_count = 0
+    tasks.total_count = 0
   }
 }
 
@@ -310,18 +445,18 @@ async function loadCheckin(): Promise<void> {
 
 async function loadUnread(): Promise<void> {
   if (!userStore.isLogin) {
-    unread.value = 0
+    notifCount.value = 0
     return
   }
   try {
     const result = await getUnreadCount()
-    unread.value = Number(result?.count || 0)
+    notifCount.value = Number(result?.count || 0)
   } catch {
-    unread.value = 0
+    notifCount.value = 0
   }
 }
 
-async function onSign(): Promise<void> {
+async function onSignIn(): Promise<void> {
   if (!ensureLogin() || signing.value) return
   if (checked.value) {
     toast('今天已经签到过了')
@@ -332,10 +467,9 @@ async function onSign(): Promise<void> {
   try {
     await signIn()
     toast('签到成功', 'success')
-    // 签到会加经验 / 积分：重新拉一次登录态，让金币 / 经验 / 等级一起刷新
-    await Promise.all([loadCheckin(), loadStats(), userStore.checkLoginState()])
+    await Promise.all([loadCheckin(), loadSummary(), loadTasks(), userStore.checkLoginState()])
   } catch {
-    // 请求层已提示（如「今日已签到」）
+    // 请求层已提示
   } finally {
     signing.value = false
   }
@@ -345,21 +479,27 @@ function onLogout(): void {
   uni.showModal({
     title: '退出登录',
     content: '确定要退出当前账号吗？',
+    confirmColor: '#c7482a',
     success: async (res) => {
       if (!res.confirm) return
       await userStore.logout()
-      stats.value = null
+      summary.value = {}
+      tasks.list = []
+      tasks.done_count = 0
+      tasks.total_count = 0
       checkin.value = null
-      unread.value = 0
+      notifCount.value = 0
       recentKeys.value = []
-      clearRecentServices()
       toast('已退出登录', 'success')
     }
   })
 }
 
 onShow(() => {
-  loadStats()
+  loadShortcutKeys()
+  loadRecent()
+  loadSummary()
+  loadTasks()
   loadCheckin()
   loadUnread()
 })
@@ -368,270 +508,376 @@ onShow(() => {
 <style lang="scss" scoped>
 .mine-page {
   min-height: 100vh;
-  padding: 16rpx 24rpx calc(140rpx + env(safe-area-inset-bottom));
-  background: #f5f6f8;
-  padding-top: calc(16rpx + env(safe-area-inset-top));
+  padding: 14px 14px calc(76px + env(safe-area-inset-bottom));
+  padding-top: calc(14px + env(safe-area-inset-top));
+  background: var(--bg);
+  background-image: var(--gradient-page);
 }
 
-.card {
-  margin-top: 22rpx;
-  padding: 28rpx 26rpx;
-  background: #ffffff;
-  border: 1rpx solid #eef0f3;
-  border-radius: 24rpx;
-}
-
-/* 搜索 */
-.search-bar {
+.my {
   display: flex;
-  align-items: center;
-  gap: 12rpx;
-  height: 76rpx;
-  padding: 0 26rpx;
-  background: #ffffff;
-  border: 1rpx solid #eef0f3;
-  border-radius: 38rpx;
-}
-
-.search-text {
-  font-size: 25rpx;
-  color: #9ca3af;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* 资料卡 */
-.profile-card {
-  padding-bottom: 8rpx;
+.my-profile {
+  padding: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
-.profile-top {
+.my-profile-top {
   display: flex;
   align-items: center;
-  gap: 20rpx;
+  gap: 12px;
 }
 
-.avatar {
-  display: block;
-  flex: none;
-  width: 104rpx;
-  height: 104rpx;
-  background: #f3f4f6;
+.my-avatar {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
+  background: var(--bg-muted);
 }
 
-.avatar-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.profile-name {
-  display: block;
-  font-size: 36rpx;
-  font-weight: 600;
-  color: $inis-text;
-}
-
-.profile-sub {
-  display: block;
-  margin-top: 8rpx;
-  font-size: 21rpx;
-  color: #9ca3af;
-}
-
-.sign-btn {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  height: 60rpx;
-  padding: 0 26rpx;
-  background: #2f7cf6;
-  border-radius: 30rpx;
-}
-
-.sign-btn.is-done {
-  background: #eef1f5;
-}
-
-.sign-text {
-  font-size: 23rpx;
-  font-weight: 500;
-  color: #ffffff;
-}
-
-.sign-btn.is-done .sign-text {
-  color: #9ca3af;
-}
-
-.stat-row {
-  display: flex;
-  align-items: center;
-  margin-top: 26rpx;
-  padding-top: 22rpx;
-  border-top: 1rpx solid #f0f1f4;
-}
-
-.stat-cell {
+.my-profile-text {
   flex: 1;
+  min-width: 0;
 }
 
-.stat-cell + .stat-cell {
-  padding-left: 26rpx;
-  border-left: 1rpx solid #f0f1f4;
-}
-
-.stat-label {
-  display: block;
-  font-size: 20rpx;
-  color: #9ca3af;
-}
-
-.stat-value {
-  display: block;
-  margin-top: 6rpx;
-  font-size: 32rpx;
-  font-weight: 600;
-  color: $inis-text;
-}
-
-/* 消息条 */
-.msg-bar {
+.my-nickname {
   display: flex;
   align-items: center;
-  gap: 10rpx;
-  padding: 24rpx 26rpx;
-}
-
-.msg-dot {
-  width: 12rpx;
-  height: 12rpx;
-  background: #ef4444;
-  border-radius: 50%;
-}
-
-.msg-text {
-  flex: 1;
-  font-size: 25rpx;
-  color: #374151;
-}
-
-/* 分组 */
-.section-head {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12rpx;
-}
-
-.section-title {
-  font-size: 28rpx;
+  gap: 4px;
+  max-width: 100%;
+  font-size: 17px;
   font-weight: 600;
-  color: $inis-text;
+  color: var(--text);
 }
 
-.section-link {
-  margin-left: auto;
-  font-size: 23rpx;
-  color: #2f7cf6;
+.my-nickname .bi {
+  font-size: 13px;
+  color: var(--text-light);
 }
 
-.section-desc {
-  margin-left: 12rpx;
-  font-size: 20rpx;
-  color: #b0b4bb;
+.my-nickname-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.grid {
-  display: flex;
-  flex-wrap: wrap;
+.my-sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
-.grid-item {
+.my-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.my-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 25%;
-  padding: 20rpx 0;
+  gap: 2px;
+  padding: 0 4px;
+  border-right: 1px solid var(--border-soft);
 }
 
-.grid-5 .grid-item {
-  width: 20%;
+.my-stat:last-child {
+  border-right: none;
 }
 
-.grid-label {
-  margin-top: 14rpx;
-  font-size: 21rpx;
-  color: #374151;
+.my-stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
-/* 等级 / 会员 */
-.duo-row {
-  display: flex;
-  align-items: stretch;
-  gap: 20rpx;
+.my-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
 }
 
-.duo-row .card {
-  flex: 1;
-  min-width: 0;
-  margin-top: 22rpx;
-  padding: 24rpx;
-}
-
-.duo-head {
+/* 未读消息条 */
+.my-notice {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  color: var(--text-soft);
+  font-size: 13px;
 }
 
-.duo-title {
-  font-size: 21rpx;
-  color: #6b7280;
+.my-notice-icon {
+  position: relative;
+  display: flex;
+  font-size: 16px;
+  color: var(--primary);
 }
 
-.duo-value {
-  display: block;
-  margin-top: 12rpx;
-  font-size: 30rpx;
+.my-notice-dot {
+  position: absolute;
+  top: -1px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.my-notice-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-arrow {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+/* 通用卡片 */
+.my-card {
+  padding: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+}
+
+.my-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.my-card-title {
+  display: flex;
+  align-items: baseline;
+  font-size: 14px;
   font-weight: 600;
-  color: $inis-text;
+  color: var(--text);
 }
 
-.progress {
-  height: 10rpx;
-  margin-top: 16rpx;
-  background: #eef1f5;
-  border-radius: 5rpx;
+.my-card-sub {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.my-link {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* 常用 / 最近使用的图标宫格 */
+.my-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px 0;
+}
+
+.my-grid-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 2px;
+  color: var(--text-soft);
+}
+
+.my-grid-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--bg-muted);
+  color: var(--text-soft);
+  font-size: 18px;
+}
+
+.my-grid-label {
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.my-grid-badge {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 26px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+}
+
+.my-grid-badge.is-add {
+  background: var(--primary);
+}
+
+.my-grid-item.is-hidden {
+  opacity: 0.55;
+}
+
+.my-tip {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* 等级 / 账号安全 */
+.my-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.my-mini {
+  display: block;
+  color: var(--text);
+}
+
+.my-mini-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.my-mini-value {
+  display: block;
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.my-mini-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.my-bar {
+  height: 6px;
+  margin-top: 10px;
+  border-radius: 3px;
+  background: var(--bg-muted);
   overflow: hidden;
 }
 
-.progress-inner {
+.my-bar-inner {
   height: 100%;
-  background: linear-gradient(90deg, #2f7cf6, #5b9bf8);
-  border-radius: 5rpx;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-deep));
 }
 
-.duo-hint {
-  display: block;
-  margin-top: 12rpx;
-  font-size: 20rpx;
-  color: #9ca3af;
+/* 今日任务 */
+.my-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* 退出登录 */
-.logout-btn {
+.my-task {
   display: flex;
   align-items: center;
-  justify-content: center;
-  height: 92rpx;
-  margin-top: 22rpx;
-  background: #ffffff;
-  border: 1rpx solid #eef0f3;
-  border-radius: 24rpx;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-soft);
 }
 
-.logout-text {
-  font-size: 26rpx;
-  color: #ef4444;
+.my-task .bi {
+  font-size: 14px;
+  color: var(--text-light);
+}
+
+.my-task.is-done {
+  color: var(--text-muted);
+}
+
+.my-task.is-done .bi {
+  color: var(--success);
+}
+
+.my-task-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-task-value {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--primary);
+}
+
+/* 协议入口 */
+.my-links {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+}
+
+.my-link-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.my-link-item + .my-link-item {
+  border-top: 1px solid var(--border-soft);
+}
+
+.my-link-item > .bi:first-child {
+  font-size: 15px;
+  color: var(--primary);
+}
+
+.my-link-item-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.my-link-item.is-danger > .bi:first-child,
+.my-link-item.is-danger .my-link-item-text {
+  color: var(--danger);
 }
 </style>
