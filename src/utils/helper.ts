@@ -31,14 +31,41 @@ export function pickUserTitleText(user?: UserInfo | null): string {
   return String(user?.title || '')
 }
 
+/** 实况图分隔符：单项写成「图片URL::视频URL」（与 Mellow/utils/livePhoto.js 同口径） */
+const LIVE_SEPARATOR = '::'
+
+/** 取实况图项的图片地址：`图片::视频` → `图片`，普通图片原样返回 */
+export function parseLiveImage(raw: unknown): string {
+  const value = String(raw ?? '').trim()
+  if (!value) return ''
+  const index = value.indexOf(LIVE_SEPARATOR)
+  return index < 0 ? value : value.slice(0, index).trim()
+}
+
+/** 取实况图项的视频地址：没有视频（普通图片）时返回空串 */
+export function parseLiveVideo(raw: unknown): string {
+  const value = String(raw ?? '').trim()
+  const index = value.indexOf(LIVE_SEPARATOR)
+  return index < 0 ? '' : value.slice(index + LIVE_SEPARATOR.length).trim()
+}
+
 /**
  * 解析逗号分隔的图片字段（covers / images 都是这种存法）
  * 兼容三种形式：数组、JSON 数组字符串、逗号分隔字符串
+ *
+ * 动态配图支持实况图，单项是「图片::视频」（见 Mellow/utils/livePhoto.js）。
+ * 这里只返回图片地址：`<image>` / 封面 / 灯箱都只要静态图，
+ * 整串带视频地址会让图片加载失败。需要视频的地方用 parseLiveVideo。
  */
 export function parseImageList(value?: string | string[] | null): string[] {
   if (!value) return []
-  if (Array.isArray(value)) return value.filter(Boolean).map(String)
-  const raw = String(value).trim()
+  const list = Array.isArray(value) ? value : splitImageString(String(value))
+  return list.map(parseLiveImage).filter(Boolean)
+}
+
+/** 逗号分隔字符串 → 原始项（实况图项仍保留 ::视频） */
+function splitImageString(value: string): string[] {
+  const raw = value.trim()
   if (!raw) return []
   if (raw.startsWith('[')) {
     try {
