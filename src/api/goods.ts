@@ -6,7 +6,7 @@ import type { GoodsBuyResult, GoodsCategory, GoodsItem, GoodsStats, PageResult }
  *
  * 注意几个和后端实现强相关的点：
  * - 列表返回 `{ data, count, page }`，其中 **page 是总页数**（usePagedList 已按此判断到底）；
- * - `limit` 被 SYSTEM_PAGE_LIMIT 夹到最大 50，传 0 会被改回 10；
+ * - `limit` 传 `<=0` 会被改回默认 10（不再有全站分页上限）；
  * - 非管理员强制 `status = 1` 且排除 `deliver_type = "decoration"`，
  *   所以装扮商品不会出现在这里，装扮走 api/decoration.ts；
  * - 兑换就是 `POST /api/goods/buy`，没有 exchange 之类的动词。
