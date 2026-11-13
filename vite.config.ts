@@ -19,7 +19,9 @@ export default defineConfig({
 
   server: {
     host: true,
-    port: 5173,
+    // 5173 常被 Mellow 主题的 dev server 占用，inis-app 固定用 5199（strictPort 保证不会静默串台）
+    port: 5199,
+    strictPort: true,
     proxy: {
       // 开发期把 /api 与 /dev 代理到本地后端（默认端口 8642），规避 H5 跨域：
       // 生产环境改用 .env.production 里的 VITE_API_BASE 指向真实域名，

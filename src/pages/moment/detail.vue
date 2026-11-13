@@ -40,21 +40,29 @@
           </view>
         </view>
 
-        <!-- 正文 -->
-        <text v-if="content" class="mt-3 block text-15px text-main">{{ content }}</text>
-
-        <!-- 图片 -->
-        <view v-if="images.length" class="mt-3 flex flex-wrap gap-2">
+        <!-- 图片：单图给满宽大图，多图三列方图（小红书式） -->
+        <view v-if="images.length" class="mt-3">
           <image
-            v-for="(url, index) in images"
-            :key="url"
-            class="rounded-3 bg-gray-100"
-            :class="images.length === 1 ? 'h-52 w-full' : 'h-32 w-32'"
-            :src="url"
-            mode="aspectFill"
-            @click="previewImage(index)"
+            v-if="images.length === 1"
+            class="w-full rounded-2 bg-gray-100"
+            :src="images[0]"
+            mode="widthFix"
+            @click="previewImage(0)"
           />
+          <view v-else class="grid grid-cols-3 gap-1">
+            <image
+              v-for="(url, index) in images"
+              :key="url"
+              class="aspect-square w-full rounded-2 bg-gray-100"
+              :src="url"
+              mode="aspectFill"
+              @click="previewImage(index)"
+            />
+          </view>
         </view>
+
+        <!-- 正文 -->
+        <text v-if="content" class="mt-3 block text-15px text-main leading-7">{{ content }}</text>
 
         <view v-if="moment.location" class="mt-3 flex items-center gap-1">
           <wd-icon name="location" :size="14" color="#9ca3af" />

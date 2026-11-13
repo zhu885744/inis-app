@@ -1,5 +1,5 @@
 import { http } from './request'
-import type { TargetType } from './types'
+import type { AuthorInfo, TargetType } from './types'
 
 /**
  * 收藏（user-collects）
@@ -40,5 +40,27 @@ export function getCollectCounts(targetType: TargetType, targetIds: number[]) {
   return http.get<{ counts: Record<string, number> }>('/user-collects/counts', {
     target_type: targetType,
     target_ids: targetIds.filter((id) => Number(id) > 0).join(',')
+  })
+}
+
+/** 一条收藏记录（collects 返回的 list 项，只带目标 id 与作者，笔记内容要二次回查） */
+export interface CollectRef {
+  id: number
+  target_type: string
+  target_id: number
+  create_time?: number
+  result?: { author?: AuthorInfo; [key: string]: any }
+  [key: string]: any
+}
+
+/**
+ * 收藏列表（GET user-collects/collects）
+ *
+ * 未登录时必须传 uid；查他人且对方关闭了「公开我的收藏」会返回 `{ private: true }`。
+ * 不传 uid 时查自己。
+ */
+export function getCollects(params: { uid?: number; target_type?: TargetType; field?: string } = {}) {
+  return http.get<{ list?: CollectRef[]; count?: number; private?: boolean }>('/user-collects/collects', params, {
+    silent: true
   })
 }

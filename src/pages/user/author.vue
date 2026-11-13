@@ -1,116 +1,105 @@
 <template>
-  <view class="min-h-screen bg-page">
-    <!-- 头部 -->
-    <view class="author-head">
-      <view class="flex items-center">
-        <view class="flex-center h-8 w-8 rounded-full bg-white/25" @click="back">
-          <wd-icon name="arrow-left1" :size="17" color="#ffffff" />
-        </view>
-        <text class="ml-2 text-15px text-white font-medium">主页</text>
+  <view class="author-page">
+    <!-- 顶栏：只有返回（小红书的主页顶部极简） -->
+    <view class="author-topbar">
+      <view class="topbar-btn" @click="back">
+        <text class="bi bi-chevron-left" />
       </view>
+      <text class="topbar-title">主页</text>
+      <view class="topbar-btn is-placeholder" />
+    </view>
 
-      <view class="mt-4 flex items-center gap-3">
-        <image class="h-14 w-14 flex-none rounded-full bg-white/25" :src="profile.avatar" mode="aspectFill" />
-        <view class="min-w-0 flex-1">
-          <view class="flex items-center">
-            <text class="max-w-40 text-18px text-white font-semibold ellipsis">{{ profile.nickname }}</text>
+    <!-- 资料卡 -->
+    <view class="profile">
+      <view class="profile-row">
+        <image v-if="profile.avatar" class="profile-avatar" :src="profile.avatar" mode="aspectFill" />
+        <view v-else class="profile-avatar profile-avatar-empty">
+          <text class="bi bi-person-fill" />
+        </view>
+
+        <view class="profile-main">
+          <view class="profile-name">
+            <text class="profile-nickname ellipsis">{{ profile.nickname }}</text>
             <TitleBadge :payload="titlePayload" :text="titleText" />
           </view>
-          <text class="mt-1 block text-12px text-white/80 ellipsis">{{ profile.description || '这个人很懒，什么都没写' }}</text>
+          <text class="profile-id">INIS 号：{{ profile.id }}</text>
         </view>
 
         <view
           v-if="canFollow"
-          class="flex-none rounded-full bg-white px-4 py-2"
+          class="xhs-btn profile-btn"
+          :class="{ 'is-plain': relation.following }"
           @click="toggleFollow"
         >
-          <text class="text-12px font-medium" :class="relation.following ? 'text-sub' : 'text-primary'">
-            {{ followLabel }}
-          </text>
+          {{ followLabel }}
         </view>
       </view>
-    </view>
 
-    <!-- 社交数字 -->
-    <view class="mx-3 -mt-6 flex rounded-3 bg-white py-4 shadow-sm">
-      <view class="flex-1 flex-col-center" @click="openFollowList('following')">
-        <text class="text-16px text-main font-semibold">{{ statsText.follow }}</text>
-        <text class="mt-1 text-11px text-weak">关注</text>
-      </view>
-      <view class="flex-1 flex-col-center" @click="openFollowList('followers')">
-        <text class="text-16px text-main font-semibold">{{ statsText.fans }}</text>
-        <text class="mt-1 text-11px text-weak">粉丝</text>
-      </view>
-      <view class="flex-1 flex-col-center">
-        <text class="text-16px text-main font-semibold">{{ statsText.moment }}</text>
-        <text class="mt-1 text-11px text-weak">动态</text>
-      </view>
-      <view class="flex-1 flex-col-center">
-        <text class="text-16px text-main font-semibold">{{ statsText.article }}</text>
-        <text class="mt-1 text-11px text-weak">文章</text>
-      </view>
-      <view class="flex-1 flex-col-center">
-        <text class="text-16px text-main font-semibold">{{ statsText.likes }}</text>
-        <text class="mt-1 text-11px text-weak">获赞</text>
+      <text class="profile-bio">{{ profile.description || '这个人很懒，什么都没写' }}</text>
+
+      <view class="profile-stats">
+        <view class="profile-stat" @click="openFollowList('following')">
+          <text class="stat-num">{{ formatCount(statsText.follow) }}</text>
+          <text class="stat-label">关注</text>
+        </view>
+        <view class="profile-stat" @click="openFollowList('followers')">
+          <text class="stat-num">{{ formatCount(statsText.fans) }}</text>
+          <text class="stat-label">粉丝</text>
+        </view>
+        <view class="profile-stat">
+          <text class="stat-num">{{ formatCount(statsText.likes) }}</text>
+          <text class="stat-label">获赞</text>
+        </view>
       </view>
     </view>
 
     <!-- 动态 / 文章 -->
-    <view class="mt-3 px-3 pb-30">
-      <view class="flex items-center gap-5 px-1">
-        <view v-for="item in TABS" :key="item.key" @click="switchTab(item.key)">
-          <text class="text-15px" :class="tab === item.key ? 'text-main font-semibold' : 'text-sub'">
-            {{ item.label }}
-          </text>
-          <view v-if="tab === item.key" class="mt-1 h-1 w-5 rounded-full bg-primary" />
-        </view>
-      </view>
-
-      <view class="mt-3">
-        <template v-if="tab === 'moment'">
-          <MomentCard v-for="item in momentView.items.value" :key="item.id" :moment="item" @click="openMoment(item.id)" />
-          <view v-if="momentView.empty.value" class="py-16 text-center">
-            <text class="text-13px text-weak">还没有发布动态</text>
-          </view>
-        </template>
-
-        <template v-else>
-          <ArticleCard v-for="item in articleView.items.value" :key="item.id" :article="item" @click="openArticle(item.id)" />
-          <view v-if="articleView.empty.value" class="py-16 text-center">
-            <text class="text-13px text-weak">还没有发布文章</text>
-          </view>
-        </template>
-
-        <view class="py-3 text-center">
-          <text class="text-12px text-primary">{{ currentLoading ? '加载中…' : currentFinished ? '没有更多了' : '加载更多' }}</text>
-        </view>
+    <view class="author-tabs">
+      <view
+        v-for="item in TABS"
+        :key="item.key"
+        class="author-tab"
+        :class="{ 'is-active': tab === item.key }"
+        @click="switchTab(item.key)"
+      >
+        <text>{{ item.label }}</text>
+        <text class="author-tab-count">{{ item.key === 'moment' ? statsText.moment : statsText.article }}</text>
+        <view class="author-tab-line" />
       </view>
     </view>
+
+    <NoteWaterfall
+      :notes="notes"
+      :loading="currentLoading"
+      :finished="currentFinished"
+      :empty-text="emptyText"
+      @click="onNoteClick"
+    />
   </view>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onLoad, onPullDownRefresh, onReachBottom } from '@dcloudio/uni-app'
-import ArticleCard from '@/components/ArticleCard.vue'
-import MomentCard from '@/components/MomentCard.vue'
+import NoteWaterfall from '@/components/NoteWaterfall.vue'
 import TitleBadge from '@/components/TitleBadge.vue'
 import { getArticles } from '@/api/article'
 import { getMoments } from '@/api/moments'
 import { follow, getRelation, getSocialStats, getUserInfo, unfollow } from '@/api/follow'
 import type { ArticleItem, AuthorInfo, MomentItem, SocialStats } from '@/api/types'
+import { articleToNote, momentToNote } from '@/composables/useNotes'
 import { usePagedList, type PagedList } from '@/composables/usePagedList'
 import { useUserStore } from '@/stores/user'
-import { pickUserTitlePayload, pickUserTitleText } from '@/utils/helper'
+import { formatCount, pickUserTitlePayload, pickUserTitleText } from '@/utils/helper'
 import { toast } from '@/utils/toast'
 import { toLogin } from '@/utils/nav'
 
 /**
- * 作者主页
+ * 作者主页（小红书式版式，与「我的」页同一套结构）
  *
  * - 社交数字走 user-follows/stats（无需登录，后端缓存 5 分钟）
  * - 关注按钮按 user-follows/relation 的四态展示：关注 / 已关注 / 回关 / 互关
- * - 动态与文章都用 `where={uid}` 复用列表接口（后端对非管理员会强制只返回已审核公开内容）
+ * - 动态与文章都用 `where={uid}` 复用列表接口，渲染成统一的双列笔记流
  */
 type TabKey = 'moment' | 'article'
 
@@ -128,7 +117,6 @@ const follower = ref(false)
 const mutual = ref(false)
 const followBusy = ref(false)
 const stats = ref<SocialStats | null>(null)
-
 const user = ref<AuthorInfo | null>(null)
 
 const momentList = usePagedList<MomentItem>(
@@ -158,6 +146,14 @@ const currentLoading = computed(() =>
 const currentFinished = computed(() =>
   tab.value === 'moment' ? momentView.finished.value : articleView.finished.value
 )
+
+const emptyText = computed(() => (tab.value === 'moment' ? '还没有发布动态' : '还没有发布文章'))
+
+/** 列表项 → 笔记：动态与文章在小红书式界面里是同一种卡片 */
+const notes = computed(() => {
+  if (tab.value === 'moment') return (momentView.items.value as MomentItem[]).map(momentToNote)
+  return (articleView.items.value as ArticleItem[]).map(articleToNote)
+})
 
 const profile = computed(() => {
   const info: AuthorInfo | null = user.value
@@ -261,12 +257,9 @@ function openFollowList(type: 'following' | 'followers'): void {
   uni.navigateTo({ url: `/pages/user/follow?uid=${profile.value.id}&type=${type}` })
 }
 
-function openMoment(id: number): void {
-  uni.navigateTo({ url: `/pages/moment/detail?id=${id}` })
-}
-
-function openArticle(id: number): void {
-  uni.navigateTo({ url: `/pages/article/detail?id=${id}` })
+function onNoteClick(id: number, type: 'article' | 'moment'): void {
+  const url = type === 'article' ? `/pages/article/detail?id=${id}` : `/pages/moment/detail?id=${id}`
+  uni.navigateTo({ url })
 }
 
 function back(): void {
@@ -301,8 +294,174 @@ onReachBottom(() => {
 </script>
 
 <style lang="scss" scoped>
-.author-head {
-  padding: calc(40rpx + env(safe-area-inset-top)) 32rpx 80rpx;
-  background: linear-gradient(135deg, $inis-primary-light, $inis-primary-dark);
+.author-page {
+  min-height: 100vh;
+  background: var(--bg);
+  padding-bottom: 20px;
+}
+
+/* 顶栏 */
+.author-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  padding-top: calc(8px + env(safe-area-inset-top));
+  background: var(--bg);
+}
+
+.topbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  font-size: 17px;
+  color: var(--text);
+}
+
+.topbar-btn.is-placeholder {
+  visibility: hidden;
+}
+
+.topbar-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* 资料卡：与「我的」页同一套排版 */
+.profile {
+  padding: 4px 16px 12px;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-avatar {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--bg-muted);
+  border: 2px solid #fff;
+}
+
+.profile-avatar-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: var(--text-light);
+}
+
+.profile-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-nickname {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.profile-id {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.profile-btn {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 14px;
+  font-size: 12px;
+}
+
+.profile-bio {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+
+.profile-stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 12px;
+}
+
+.profile-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.stat-num {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* tab */
+.author-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 34px;
+  padding: 10px 0 0;
+  background: var(--bg);
+}
+
+.author-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 5px;
+  font-size: 14px;
+  color: var(--text-muted);
+  border-bottom: 3px solid transparent;
+}
+
+.author-tab.is-active {
+  font-weight: 700;
+  color: var(--text);
+  border-bottom-color: var(--primary);
+}
+
+.author-tab-count {
+  font-size: 11px;
+  color: var(--text-light);
+}
+
+.author-tab-line {
+  display: none;
+}
+
+.ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 </style>

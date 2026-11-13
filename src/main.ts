@@ -11,6 +11,11 @@ import 'virtual:uno.css'
  * （报错找不到 `inis-app/mellow/assets/index.css`），用 JS 相对导入最稳。
  */
 import './mellow/assets/index.css'
+/**
+ * 小红书风格主题层：必须排在 index.css 之后，
+ * 用同名 CSS 变量覆盖 Mellow 的暖纸 token（详见文件头注释）
+ */
+import './styles/xhs.css'
 
 // uni-app 要求导出 createApp 工厂函数（内部使用 createSSRApp）
 export function createApp() {

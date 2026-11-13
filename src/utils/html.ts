@@ -46,7 +46,7 @@ function escapeHtml(text: string): string {
 export function highlightHtml(value?: string | null): string {
   const raw = String(value ?? '').replace(/<(?!\/?mark\b)[^>]*>/gi, '')
   return escapeHtml(raw)
-    .replace(/&lt;mark&gt;/gi, '<span style="color:#c7482a;font-weight:600">')
+    .replace(/&lt;mark&gt;/gi, '<span style="color:#ff2442;font-weight:600">')
     .replace(/&lt;\/mark&gt;/gi, '</span>')
 }
 

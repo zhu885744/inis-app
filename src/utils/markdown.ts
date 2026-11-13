@@ -18,11 +18,11 @@ const S = {
   h2: 'font-size:34rpx;font-weight:600;margin:26rpx 0 14rpx;line-height:1.4;',
   h3: 'font-size:31rpx;font-weight:600;margin:24rpx 0 12rpx;line-height:1.4;',
   h4: 'font-size:29rpx;font-weight:600;margin:22rpx 0 12rpx;line-height:1.4;',
-  p: 'font-size:29rpx;line-height:1.8;margin:0 0 18rpx;color:#1f2937;',
-  a: 'color:#c7482a;text-decoration:none;',
+  p: 'font-size:29rpx;line-height:1.8;margin:0 0 18rpx;color:#1d1d1f;',
+  a: 'color:#ff2442;text-decoration:none;',
   img: 'max-width:100%;height:auto;border-radius:8rpx;margin:10rpx 0;',
-  code: 'font-family:monospace;font-size:26rpx;background:#f3f4f6;color:#c7482a;padding:2rpx 8rpx;border-radius:6rpx;',
-  pre: 'font-family:monospace;font-size:26rpx;background:#f6f7f9;color:#374151;padding:20rpx;border-radius:10rpx;margin:0 0 18rpx;white-space:pre-wrap;word-break:break-all;',
+  code: 'font-family:monospace;font-size:26rpx;background:#f3f4f6;color:#ff2442;padding:2rpx 8rpx;border-radius:6rpx;',
+  pre: 'font-family:monospace;font-size:26rpx;background:#f5f5f5;color:#374151;padding:20rpx;border-radius:10rpx;margin:0 0 18rpx;white-space:pre-wrap;word-break:break-all;',
   blockquote: 'border-left:6rpx solid #e5e7eb;padding:4rpx 0 4rpx 20rpx;margin:0 0 18rpx;color:#6b7280;font-size:28rpx;line-height:1.8;',
   ul: 'margin:0 0 18rpx;padding-left:36rpx;',
   ol: 'margin:0 0 18rpx;padding-left:36rpx;',
@@ -58,7 +58,11 @@ function inline(raw: string): string {
 
 /** Markdown 正文 → rich-text 可用的 HTML */
 export function markdownToHtml(source?: string | null): string {
-  const lines = String(source || '').replace(/\r\n?/g, '\n').split('\n')
+  // 站内正文常带编辑器留下的 `<br/>` 字面量。若不先转成换行，
+  // 下面的 escapeHtml 会把它转义成文本，读者会看到「<br/>」这五个字符
+  // （见 2026-11 修复：文章详情正文里直接显示 <br/>）。
+  const normalized = String(source || '').replace(/<br\s*\/?>/gi, '\n').replace(/\r\n?/g, '\n')
+  const lines = normalized.split('\n')
   const out: string[] = []
 
   let index = 0
@@ -161,7 +165,10 @@ export function markdownToHtml(source?: string | null): string {
       buffer.push(lines[index].trim())
       index += 1
     }
-    out.push(`<p style="${S.p}">${inline(buffer.join('<br/>'))}</p>`)
+    // 段落内的软换行先逐行做 inline（内部会 escapeHtml），再插入 <br/> 连接。
+    // 若反过来先 join 再 inline，拼接出来的 <br/> 会被转义成 &lt;br/&gt;，
+    // 页面上就会直接显示「<br/>」这串字符。
+    out.push(`<p style="${S.p}">${buffer.map(inline).join('<br/>')}</p>`)
   }
 
   closeList()
@@ -174,7 +181,9 @@ export function markdownToHtml(source?: string | null): string {
  * - markdown（含未标注）：走上面的轻量转换
  */
 export function renderContent(content?: string | null, editor?: string | null): string {
-  const raw = String(content || '')
+  // 存库时 `<br/>` 常被二次转义成 `&lt;br/&gt;`，rich-text 会把它当纯文本画出来，
+  // 读者看到的就是「<br/>」字符。这里在渲染入口统一还原（只针对 br，不动其它实体）。
+  const raw = String(content || '').replace(/&lt;br\s*\/?&gt;/gi, '<br/>')
   if (!raw.trim()) return ''
   return isRichTextEditor(editor) ? sanitizeHtml(raw) : markdownToHtml(raw)
 }

@@ -290,19 +290,15 @@ onReachBottom(() => {
 .section-title {
   display: flex;
   align-items: center;
-  font-family: var(--font-serif);
-  font-size: 20px;
-  font-weight: 900;
-  letter-spacing: 0.02em;
+  font-family: var(--font-sans);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   color: var(--text);
 }
 
 .title-bar {
-  width: 4px;
-  height: 20px;
-  margin-right: 10px;
-  border-radius: 2px;
-  background: var(--primary);
+  display: none;
 }
 
 .unread-pill {
@@ -333,32 +329,49 @@ onReachBottom(() => {
   margin-bottom: 12px;
 }
 
-/* 分段控件（与首页「发现」筛选完全同款） */
+/* 分类：小红书式下划线 tab */
 .feed-filter {
   display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border-radius: 999px;
-  background: var(--bg-muted);
+  gap: 20px;
+  padding: 0 2px;
+  background: transparent;
 }
 
 .feed-filter-item {
-  padding: 3px 12px;
-  border-radius: 999px;
+  position: relative;
+  padding: 0 0 7px;
+  border-radius: 0;
   color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.7;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .feed-filter-item.is-active {
-  color: #fff;
+  font-weight: 700;
+  color: var(--text);
+  background: transparent;
+}
+
+.feed-filter-item.is-active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 16px;
+  height: 3px;
+  transform: translateX(-50%);
+  border-radius: 2px;
   background: var(--primary);
 }
 
+/* 消息列表：整块白卡 + 分割线（小红书的通知列表结构） */
 .msg-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 .msg-item {
@@ -367,13 +380,16 @@ onReachBottom(() => {
   gap: 10px;
   padding: 14px;
   background: var(--bg-card);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-lg);
+  border-bottom: 1px solid var(--border-soft);
+  border-radius: 0;
+}
+
+.msg-item:last-child {
+  border-bottom: none;
 }
 
 .msg-item.is-unread {
-  border-color: var(--accent-ring);
-  background: var(--bg-card);
+  background: #fffafa;
 }
 
 .msg-avatar-wrap {

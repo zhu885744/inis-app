@@ -15,17 +15,17 @@ export default defineConfig({
 
   theme: {
     colors: {
-      // 与后台 / Mellow 主题一致的朱砂主色
-      primary: '#c7482a',
-      'primary-light': '#d9664c',
-      'primary-dark': '#a3391f',
+      // 小红书风格主色（与 src/styles/xhs.css 的 --xhs-red 保持一致）
+      primary: '#ff2442',
+      'primary-light': '#ff5c72',
+      'primary-dark': '#e61e3c',
       // 页面底色；灰色系直接用 UnoCSS 内置色板（gray-100 ~ gray-800）
       //
       // 注意：不要用 bg-#f6f7f9 这类任意值类 —— 小程序端 WXSS 不支持
       // 带转义符的选择器（.bg-\#f6f7f9），会整条样式失效。
-      page: '#f6f7f9',
+      page: '#f5f5f5',
       // 分割线 / 卡片描边
-      line: '#eef0f3'
+      line: '#ebebeb'
     }
   },
 
