@@ -1,0 +1,222 @@
+<template>
+	<view class="page">
+		<view class="header" :style="{ paddingTop: statusBarHeight + 'px' }">
+			<text class="header-title">我的</text>
+		</view>
+
+		<!-- 资料卡 -->
+		<view class="profile">
+			<image v-if="avatar !== ''" class="avatar" :src="avatar" mode="aspectFill" />
+			<view v-else class="avatar avatar-empty">
+				<text class="avatar-text">?</text>
+			</view>
+
+			<view class="profile-main">
+				<text class="profile-name ellipsis">{{ isLogin ? nickname : '未登录' }}</text>
+				<text v-if="isLogin" class="profile-sub ellipsis">账号：{{ accountText }}</text>
+				<text v-else class="profile-sub">登录后可以点赞、评论和发布内容</text>
+			</view>
+
+			<view v-if="!isLogin" class="login-btn" @click="goLogin">
+				<text class="login-btn-text">登录</text>
+			</view>
+		</view>
+
+		<!-- 菜单 -->
+		<view class="menu">
+			<view class="menu-item" @click="onPending('编辑资料')">
+				<text class="menu-label">编辑资料</text>
+				<text class="menu-arrow">›</text>
+			</view>
+			<view class="menu-item" @click="onPending('账号与安全')">
+				<text class="menu-label">账号与安全</text>
+				<text class="menu-arrow">›</text>
+			</view>
+			<view class="menu-item" @click="onPending('我的主页')">
+				<text class="menu-label">我的主页</text>
+				<text class="menu-arrow">›</text>
+			</view>
+		</view>
+
+		<view class="menu">
+			<view class="menu-item" @click="onPending('用户协议')">
+				<text class="menu-label">用户协议</text>
+				<text class="menu-arrow">›</text>
+			</view>
+			<view class="menu-item" @click="onPending('隐私政策')">
+				<text class="menu-label">隐私政策</text>
+				<text class="menu-arrow">›</text>
+			</view>
+		</view>
+
+		<view v-if="isLogin" class="menu">
+			<view class="menu-item" @click="onLogout">
+				<text class="menu-label menu-label-danger">退出登录</text>
+			</view>
+		</view>
+
+		<view class="tabbar-space"></view>
+		<AppTabBar current="mine"></AppTabBar>
+	</view>
+</template>
+
+<script setup>
+import { computed, ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import AppTabBar from '@/components/AppTabBar.uvue'
+import { avatar, isLogin, logout, nickname, user } from '@/stores/user'
+import { toast } from '@/utils/toast'
+import { toLogin } from '@/utils/nav'
+
+/**
+ * 我的
+ *
+ * 基础版：资料卡 + 菜单 + 退出登录。
+ * 资料编辑、账号安全、主页等页面还在迁移队列里，点击给出明确提示。
+ */
+const statusBarHeight = ref(0)
+
+const accountText = computed<string>(() => {
+	if (user.value == null) return '未设置'
+	const account = user.value.account
+	return account == null || `${account}` === '' ? '未设置' : `${account}`
+})
+
+function goLogin(): void {
+	toLogin()
+}
+
+function onPending(name: string): void {
+	toast(`${name}正在迁移中`)
+}
+
+function onLogout(): void {
+	uni.showModal({
+		title: '退出登录',
+		content: '确定要退出当前账号吗？',
+		success: (res) => {
+			if (!res.confirm) return
+			logout().then(() => {
+				toast('已退出登录', 'success')
+			})
+		}
+	})
+}
+
+onLoad(() => {
+	const info = uni.getWindowInfo()
+	statusBarHeight.value = Number(info.statusBarHeight ?? 0)
+})
+</script>
+
+<style>
+.page {
+	flex: 1;
+	background-color: #f5f5f5;
+}
+
+.header {
+	padding-left: 16px;
+	padding-right: 16px;
+	padding-bottom: 10px;
+	background-color: #ffffff;
+}
+
+.header-title {
+	font-size: 16px;
+	font-weight: 600;
+	color: #1d1d1f;
+}
+
+/* 资料卡 */
+.profile {
+	flex-direction: row;
+	align-items: center;
+	padding: 16px;
+	background-color: #ffffff;
+}
+
+.avatar {
+	width: 60px;
+	height: 60px;
+	border-radius: 30px;
+	background-color: #f2f2f2;
+}
+
+.avatar-empty {
+	align-items: center;
+	justify-content: center;
+}
+
+.avatar-text {
+	font-size: 20px;
+	color: #c2c2c2;
+}
+
+.profile-main {
+	flex: 1;
+	margin-left: 12px;
+}
+
+.profile-name {
+	font-size: 17px;
+	font-weight: 600;
+	color: #1d1d1f;
+}
+
+.profile-sub {
+	margin-top: 4px;
+	font-size: 12px;
+	color: #8a8a8a;
+}
+
+.login-btn {
+	padding-left: 16px;
+	padding-right: 16px;
+	height: 30px;
+	border-radius: 15px;
+	background-color: #ff2442;
+	align-items: center;
+	justify-content: center;
+}
+
+.login-btn-text {
+	font-size: 13px;
+	color: #ffffff;
+	font-weight: 600;
+}
+
+/* 菜单 */
+.menu {
+	margin-top: 10px;
+	background-color: #ffffff;
+}
+
+.menu-item {
+	flex-direction: row;
+	align-items: center;
+	padding: 14px 16px;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+	border-bottom-color: #f4f4f4;
+}
+
+.menu-label {
+	flex: 1;
+	font-size: 14px;
+	color: #1d1d1f;
+}
+
+.menu-label-danger {
+	color: #ff2442;
+}
+
+.menu-arrow {
+	font-size: 16px;
+	color: #c2c2c2;
+}
+
+.tabbar-space {
+	height: 60px;
+}
+</style>

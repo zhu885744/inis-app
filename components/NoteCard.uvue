@@ -1,0 +1,141 @@
+<template>
+	<view class="card" @click="onTap">
+		<!-- 有封面：图片 + 两行标题；无封面：纯文字块 -->
+		<image
+			v-if="note.cover !== ''"
+			class="card-cover"
+			:src="note.cover"
+			mode="aspectFill"
+			:style="{ height: coverHeight() + 'px' }"
+		/>
+		<view v-else class="card-cover card-cover-text-wrap" :style="{ height: coverHeight() + 'px' }">
+			<text class="card-cover-text" :lines="5">{{ note.title }}</text>
+		</view>
+
+		<text v-if="note.cover !== ''" class="card-title" :lines="2">{{ note.title }}</text>
+
+		<view class="card-foot">
+			<image v-if="note.authorAvatar !== ''" class="card-avatar" :src="note.authorAvatar" mode="aspectFill" />
+			<view v-else class="card-avatar card-avatar-empty">
+				<text class="card-avatar-text">{{ authorInitial() }}</text>
+			</view>
+			<text class="card-author ellipsis">{{ note.authorName }}</text>
+			<text class="card-like">{{ likeText() }}</text>
+		</view>
+	</view>
+</template>
+
+<script setup>
+/**
+ * 双列流卡片
+ *
+ * 封面高度按 id 取三档，制造错落感（不用测量 DOM，uvue 下更稳）。
+ */
+const props = defineProps({
+	note: {
+		type: Object,
+		default: () => ({})
+	}
+})
+
+const emit = defineEmits(['tap'])
+
+function coverHeight(): number {
+	const id = Number(props.note.id ?? 0)
+	const mod = Math.abs(id) % 3
+	if (mod === 0) return 250
+	if (mod === 1) return 190
+	return 215
+}
+
+function authorInitial(): string {
+	const name = `${props.note.authorName ?? ''}`.trim()
+	return name === '' ? '?' : name.substring(0, 1)
+}
+
+function likeText(): string {
+	const likes = Number(props.note.likes ?? 0)
+	if (likes <= 0) return '♡'
+	if (likes >= 10000) return `♡ ${(likes / 10000).toFixed(1)}万`
+	return `♡ ${likes}`
+}
+
+function onTap(): void {
+	emit('tap', props.note)
+}
+</script>
+
+<style>
+.card {
+	background-color: #ffffff;
+	border-radius: 8px;
+	overflow: hidden;
+	margin-bottom: 8px;
+}
+
+.card-cover {
+	width: 100%;
+	background-color: #f2f2f2;
+	border-radius: 8px;
+}
+
+.card-cover-text-wrap {
+	justify-content: center;
+	padding: 12px;
+	box-sizing: border-box;
+}
+
+.card-cover-text {
+	font-size: 15px;
+	line-height: 22px;
+	color: #4b4b4b;
+}
+
+.card-title {
+	margin-top: 6px;
+	padding-left: 2px;
+	padding-right: 2px;
+	font-size: 13px;
+	line-height: 19px;
+	color: #1d1d1f;
+}
+
+.card-foot {
+	flex-direction: row;
+	align-items: center;
+	margin-top: 6px;
+	padding-left: 2px;
+	padding-right: 2px;
+	padding-bottom: 4px;
+}
+
+.card-avatar {
+	width: 16px;
+	height: 16px;
+	border-radius: 8px;
+	background-color: #f2f2f2;
+}
+
+.card-avatar-empty {
+	align-items: center;
+	justify-content: center;
+}
+
+.card-avatar-text {
+	font-size: 9px;
+	color: #8a8a8a;
+}
+
+.card-author {
+	flex: 1;
+	margin-left: 4px;
+	font-size: 11px;
+	color: #8a8a8a;
+}
+
+.card-like {
+	margin-left: 4px;
+	font-size: 11px;
+	color: #8a8a8a;
+}
+</style>

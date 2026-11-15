@@ -1,0 +1,74 @@
+<script setup>
+import { checkLoginState, token } from '@/stores/user'
+
+// #ifdef APP-ANDROID || APP-HARMONY
+let firstBackTime = 0
+// #endif
+
+onLaunch(() => {
+  // 冷启动带 token 时静默校验一次：过期 / 被踢会在请求层清理登录态
+  if (token.value !== '') {
+    checkLoginState().catch((err: any) => {
+      console.log('check token failed', err)
+    })
+  }
+})
+
+// #ifdef APP-ANDROID || APP-HARMONY
+onLastPageBackPress(() => {
+  if (firstBackTime == 0) {
+    uni.showToast({ title: '再按一次退出应用', position: 'bottom' })
+    firstBackTime = Date.now()
+    setTimeout(() => {
+      firstBackTime = 0
+    }, 2000)
+  } else if (Date.now() - firstBackTime < 2000) {
+    uni.exit()
+  }
+})
+// #endif
+</script>
+
+<style>
+/* 全局设计 token：与 inis-app 的 xhs.css 同口径（白灰底 + 墨色字 + 品牌红） */
+page {
+  --bg: #f5f5f5;
+  --bg-card: #ffffff;
+  --bg-muted: #f2f2f2;
+
+  --text: #1d1d1f;
+  --text-soft: #4b4b4b;
+  --text-muted: #8a8a8a;
+  --text-light: #c2c2c2;
+
+  --border: #ebebeb;
+  --border-soft: #f4f4f4;
+
+  --primary: #ff2442;
+  --primary-deep: #e61e3c;
+  --primary-soft: #ff8a9c;
+
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  background-color: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.uni-row {
+  flex-direction: row;
+}
+
+.uni-column {
+  flex-direction: column;
+}
+
+/* 单行省略 */
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

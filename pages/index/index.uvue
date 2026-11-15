@@ -1,0 +1,348 @@
+<template>
+	<view class="page">
+		<!-- 顶栏：品牌 + 搜索 + 消息 -->
+		<view class="header" :style="{ paddingTop: statusBarHeight + 'px' }">
+			<text class="brand">INIS</text>
+			<view class="search" @click="onPending('搜索')">
+				<text class="search-icon">⌕</text>
+				<text class="search-text">搜索笔记、用户</text>
+			</view>
+			<view class="header-btn" @click="onPending('消息')">
+				<text class="header-btn-icon">✉</text>
+			</view>
+		</view>
+
+		<!-- 内容 tab -->
+		<view class="tabs">
+			<view class="tab" @click="switchFeed('recommend')">
+				<text class="tab-text" :style="{ color: feed === 'recommend' ? '#1d1d1f' : '#8a8a8a', fontWeight: feed === 'recommend' ? '700' : '400' }">推荐</text>
+				<view v-if="feed === 'recommend'" class="tab-line"></view>
+			</view>
+			<view class="tab" @click="switchFeed('follow')">
+				<text class="tab-text" :style="{ color: feed === 'follow' ? '#1d1d1f' : '#8a8a8a', fontWeight: feed === 'follow' ? '700' : '400' }">关注</text>
+				<view v-if="feed === 'follow'" class="tab-line"></view>
+			</view>
+		</view>
+
+		<!-- 列表 -->
+		<view v-if="firstLoading" class="state">
+			<text class="state-text">加载中…</text>
+		</view>
+
+		<view v-else-if="notesCount === 0" class="state">
+			<text class="state-text">还没有内容</text>
+			<text class="state-tip">下拉可以刷新</text>
+		</view>
+
+		<view v-else class="columns">
+			<view class="column">
+				<NoteCard v-for="note in left" :key="note.key" :note="note" @tap="openNote"></NoteCard>
+			</view>
+			<view class="column column-right">
+				<NoteCard v-for="note in right" :key="note.key" :note="note" @tap="openNote"></NoteCard>
+			</view>
+		</view>
+
+		<view v-if="loadingMore" class="more">
+			<text class="more-text">加载中…</text>
+		</view>
+		<view v-else-if="finished && notesCount > 0" class="more">
+			<text class="more-text">没有更多了</text>
+		</view>
+
+		<view class="tabbar-space"></view>
+		<AppTabBar current="index"></AppTabBar>
+	</view>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { onLoad, onPullDownRefresh, onReachBottom } from '@dcloudio/uni-app'
+import AppTabBar from '@/components/AppTabBar.uvue'
+import NoteCard from '@/components/NoteCard.uvue'
+import { getArticles } from '@/api/article'
+import { getMoments } from '@/api/moments'
+import { articleToNote, momentToNote } from '@/utils/note'
+import { toast } from '@/utils/toast'
+
+/**
+ * 首页：文章 + 动态混合的双列流
+ *
+ * 数据：/article/list 与 /moments/list 各取一页，按创建时间合并排序，
+ * 分列用累计高度估算（不测 DOM），追加时只往两列末尾 push，卡片不会重排。
+ */
+const PAGE_SIZE = 10
+
+const statusBarHeight = ref(0)
+const feed = ref('recommend')
+const firstLoading = ref(true)
+const loadingMore = ref(false)
+const finished = ref(false)
+
+const notesCount = ref(0)
+const left = ref<any[]>([])
+const right = ref<any[]>([])
+
+let pageNo = 0
+let loading = false
+let leftHeight = 0
+let rightHeight = 0
+
+function resetColumns(): void {
+	left.value = []
+	right.value = []
+	leftHeight = 0
+	rightHeight = 0
+	notesCount.value = 0
+}
+
+/**
+ * 逐张投入较矮的一列
+ *
+ * 用整数组替换而不是 push：uvue 对「重新赋值」的响应最可靠，
+ * 批量追加也只触发一次渲染。
+ */
+function appendNotes(list: any[]): void {
+	const nextLeft = left.value.slice()
+	const nextRight = right.value.slice()
+	let lh = leftHeight
+	let rh = rightHeight
+
+	for (let i = 0; i < list.length; i++) {
+		const note = list[i]
+		const height = (note.cover === '' ? 1.05 : 1.2) + 0.36
+		if (lh <= rh) {
+			nextLeft.push(note)
+			lh += height
+		} else {
+			nextRight.push(note)
+			rh += height
+		}
+	}
+
+	left.value = nextLeft
+	right.value = nextRight
+	leftHeight = lh
+	rightHeight = rh
+	notesCount.value = nextLeft.length + nextRight.length
+}
+
+async function load(reset: boolean): Promise<void> {
+	if (loading) return
+	loading = true
+
+	if (reset) {
+		firstLoading.value = true
+		finished.value = false
+		pageNo = 0
+		resetColumns()
+	} else {
+		loadingMore.value = true
+	}
+
+	const nextPage = pageNo + 1
+	try {
+		const results = await Promise.all([
+			getArticles({ page: nextPage, limit: PAGE_SIZE }).catch(() => null),
+			getMoments({ page: nextPage, limit: PAGE_SIZE }).catch(() => null)
+		])
+
+		const articleResult: any = results[0]
+		const momentResult: any = results[1]
+
+		const list: any[] = []
+		if (articleResult != null && articleResult.data != null) {
+			const rows = articleResult.data as any[]
+			for (let i = 0; i < rows.length; i++) list.push(articleToNote(rows[i]))
+		}
+		if (momentResult != null && momentResult.data != null) {
+			const rows = momentResult.data as any[]
+			for (let i = 0; i < rows.length; i++) list.push(momentToNote(rows[i]))
+		}
+
+		list.sort((a: any, b: any) => Number(b.createTime) - Number(a.createTime))
+
+		if (list.length === 0) {
+			finished.value = true
+		} else {
+			pageNo = nextPage
+			appendNotes(list)
+			if (list.length < PAGE_SIZE) finished.value = true
+		}
+	} catch (e) {
+		toast('加载失败，请稍后重试')
+	} finally {
+		loading = false
+		firstLoading.value = false
+		loadingMore.value = false
+	}
+}
+
+function switchFeed(key: string): void {
+	if (key === 'follow') {
+		toast('关注流正在迁移中')
+		return
+	}
+	if (feed.value === key) return
+	feed.value = key
+	load(true)
+}
+
+function openNote(note: any): void {
+	toast('内容详情页正在迁移中')
+}
+
+function onPending(name: string): void {
+	toast(`${name}正在迁移中`)
+}
+
+onLoad(() => {
+	const info = uni.getWindowInfo()
+	statusBarHeight.value = Number(info.statusBarHeight ?? 0)
+	load(true)
+})
+
+onPullDownRefresh(() => {
+	load(true).then(() => {
+		uni.stopPullDownRefresh()
+	})
+})
+
+onReachBottom(() => {
+	if (finished.value || loading) return
+	load(false)
+})
+</script>
+
+<style>
+.page {
+	flex: 1;
+	background-color: #f5f5f5;
+}
+
+/* 顶栏 */
+.header {
+	flex-direction: row;
+	align-items: center;
+	padding-left: 12px;
+	padding-right: 12px;
+	padding-bottom: 8px;
+	background-color: #ffffff;
+}
+
+.brand {
+	font-size: 20px;
+	font-weight: 700;
+	color: #ff2442;
+	margin-right: 10px;
+}
+
+.search {
+	flex: 1;
+	flex-direction: row;
+	align-items: center;
+	height: 32px;
+	padding-left: 12px;
+	padding-right: 12px;
+	border-radius: 16px;
+	background-color: #f2f2f2;
+}
+
+.search-icon {
+	font-size: 15px;
+	color: #8a8a8a;
+	margin-right: 4px;
+}
+
+.search-text {
+	font-size: 13px;
+	color: #8a8a8a;
+}
+
+.header-btn {
+	width: 32px;
+	height: 32px;
+	align-items: center;
+	justify-content: center;
+}
+
+.header-btn-icon {
+	font-size: 17px;
+	color: #4b4b4b;
+}
+
+/* tab */
+.tabs {
+	flex-direction: row;
+	align-items: center;
+	padding-left: 14px;
+	padding-right: 14px;
+	padding-top: 8px;
+	padding-bottom: 6px;
+	background-color: #ffffff;
+}
+
+.tab {
+	align-items: center;
+	margin-right: 22px;
+}
+
+.tab-text {
+	font-size: 15px;
+	line-height: 20px;
+}
+
+.tab-line {
+	width: 16px;
+	height: 2px;
+	border-radius: 1px;
+	background-color: #ff2442;
+	margin-top: 3px;
+}
+
+/* 双列 */
+.columns {
+	flex-direction: row;
+	padding: 8px 8px 0 8px;
+}
+
+.column {
+	flex: 1;
+}
+
+.column-right {
+	margin-left: 8px;
+}
+
+/* 状态 */
+.state {
+	padding-top: 80px;
+	align-items: center;
+}
+
+.state-text {
+	font-size: 13px;
+	color: #8a8a8a;
+}
+
+.state-tip {
+	margin-top: 6px;
+	font-size: 11px;
+	color: #c2c2c2;
+}
+
+.more {
+	padding-top: 12px;
+	padding-bottom: 12px;
+	align-items: center;
+}
+
+.more-text {
+	font-size: 11px;
+	color: #c2c2c2;
+}
+
+.tabbar-space {
+	height: 60px;
+}
+</style>

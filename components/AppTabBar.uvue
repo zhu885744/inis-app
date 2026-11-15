@@ -1,0 +1,112 @@
+<template>
+	<view class="tabbar" :style="{ paddingBottom: safeBottom + 'px' }">
+		<view v-for="tab in tabs" :key="tab.key" class="tab" @click="onTap(tab)">
+			<view v-if="tab.center" class="tab-center">
+				<text class="tab-center-icon">＋</text>
+			</view>
+			<template v-else>
+				<text class="tab-icon" :style="{ color: active === tab.key ? '#1d1d1f' : '#8a8a8a' }">{{ tab.icon }}</text>
+				<text class="tab-text" :style="{ color: active === tab.key ? '#1d1d1f' : '#8a8a8a', fontWeight: active === tab.key ? '700' : '400' }">{{ tab.label }}</text>
+			</template>
+		</view>
+	</view>
+</template>
+
+<script setup>
+import { onMounted, ref } from 'vue'
+import { toast } from '@/utils/toast'
+
+/**
+ * 底部 Tab
+ *
+ * 原生 tabBar 换成自定义组件（uni-app x 里这样更好控样式，也和原 inis-app 一致）。
+ * 图标用 Unicode 字符：App 端不支持伪元素字体图标，先不引 iconfont。
+ * 尚未迁移的模块点击后明确提示，不静默失败。
+ */
+const props = defineProps({
+	current: { type: String, default: 'index' }
+})
+
+const active = ref(props.current)
+const safeBottom = ref(0)
+
+const tabs = [
+	{ key: 'index', label: '首页', icon: '⌂', path: '/pages/index/index', center: false },
+	{ key: 'mall', label: '商城', icon: '◈', path: '/pages/mall/index', center: false },
+	{ key: 'publish', label: '', icon: '', path: '', center: true },
+	{ key: 'message', label: '消息', icon: '✉', path: '/pages/message/index', center: false },
+	{ key: 'mine', label: '我的', icon: '☺', path: '/pages/mine/index', center: false }
+]
+
+const READY_KEYS = ['index', 'mine']
+
+function onTap(tab: any): void {
+	if (tab.center) {
+		toast('发布功能正在迁移中')
+		return
+	}
+	if (!READY_KEYS.includes(tab.key)) {
+		toast(`${tab.label}模块正在迁移中`)
+		return
+	}
+	if (tab.key === active.value) return
+	uni.reLaunch({ url: tab.path })
+}
+
+onMounted(() => {
+	const info = uni.getWindowInfo()
+	const insets: any = info.safeAreaInsets
+	if (insets != null) safeBottom.value = Number(insets.bottom ?? 0)
+})
+</script>
+
+<style>
+.tabbar {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	flex-direction: row;
+	align-items: center;
+	background-color: #ffffff;
+	border-top-width: 1px;
+	border-top-style: solid;
+	border-top-color: #ebebeb;
+	z-index: 200;
+}
+
+.tab {
+	flex: 1;
+	height: 52px;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+}
+
+.tab-icon {
+	font-size: 20px;
+	line-height: 22px;
+}
+
+.tab-text {
+	font-size: 10px;
+	line-height: 14px;
+	margin-top: 2px;
+}
+
+.tab-center {
+	width: 46px;
+	height: 32px;
+	border-radius: 8px;
+	background-color: #ff2442;
+	align-items: center;
+	justify-content: center;
+}
+
+.tab-center-icon {
+	font-size: 22px;
+	line-height: 24px;
+	color: #ffffff;
+	font-weight: 700;
+}
+</style>

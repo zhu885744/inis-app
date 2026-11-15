@@ -1,9 +1,4 @@
-node_modules
-dist
-unpackage
+unpackage/
 .DS_Store
-*.local
-*.log
-.idea
-.vscode/*
-!.vscode/extensions.json
+.hbuilderx/
+.hbuilderv/

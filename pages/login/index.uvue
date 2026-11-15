@@ -1,0 +1,177 @@
+<template>
+	<view class="page">
+		<view class="nav" :style="{ paddingTop: statusBarHeight + 'px' }">
+			<view class="nav-back" @click="back">
+				<text class="nav-back-icon">‹</text>
+			</view>
+		</view>
+
+		<view class="body">
+			<text class="title">登录 INIS</text>
+			<text class="subtitle">登录后可以点赞、评论和发布内容</text>
+
+			<view class="field">
+				<text class="field-label">账号</text>
+				<input class="field-input" v-model="account" placeholder="账号 / 邮箱 / 手机号" />
+			</view>
+
+			<view class="field">
+				<text class="field-label">密码</text>
+				<input class="field-input" v-model="password" password placeholder="请输入密码" />
+			</view>
+
+			<view class="submit" :style="{ opacity: submitting ? 0.6 : 1 }" @click="onSubmit">
+				<text class="submit-text">{{ submitting ? '登录中…' : '登录' }}</text>
+			</view>
+
+			<view class="links">
+				<text class="link" @click="onPending('注册')">注册账号</text>
+				<text class="link" @click="onPending('找回密码')">忘记密码</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { loginByPassword } from '@/stores/user'
+import { toast } from '@/utils/toast'
+import { backOrHome } from '@/utils/nav'
+
+/**
+ * 登录（账号密码）
+ *
+ * 验证码登录、注册、找回密码还在迁移队列里，入口保留但先提示。
+ */
+const statusBarHeight = ref(0)
+const account = ref('')
+const password = ref('')
+const submitting = ref(false)
+
+function back(): void {
+	backOrHome()
+}
+
+function onPending(name: string): void {
+	toast(`${name}功能正在迁移中`)
+}
+
+async function onSubmit(): Promise<void> {
+	if (submitting.value) return
+
+	const name = account.value.trim()
+	if (name === '') {
+		toast('请输入账号')
+		return
+	}
+	if (password.value === '') {
+		toast('请输入密码')
+		return
+	}
+
+	submitting.value = true
+	try {
+		await loginByPassword(name, password.value)
+		toast('登录成功', 'success')
+		setTimeout(() => {
+			backOrHome()
+		}, 400)
+	} catch (e) {
+		// 错误文案由请求层统一提示
+	} finally {
+		submitting.value = false
+	}
+}
+
+onLoad(() => {
+	const info = uni.getWindowInfo()
+	statusBarHeight.value = Number(info.statusBarHeight ?? 0)
+})
+</script>
+
+<style>
+.page {
+	flex: 1;
+	background-color: #ffffff;
+}
+
+.nav {
+	padding-left: 8px;
+	padding-bottom: 4px;
+}
+
+.nav-back {
+	width: 36px;
+	height: 36px;
+	align-items: center;
+	justify-content: center;
+}
+
+.nav-back-icon {
+	font-size: 26px;
+	color: #1d1d1f;
+}
+
+.body {
+	padding: 24px 24px 0 24px;
+}
+
+.title {
+	font-size: 24px;
+	font-weight: 700;
+	color: #1d1d1f;
+}
+
+.subtitle {
+	margin-top: 8px;
+	font-size: 13px;
+	color: #8a8a8a;
+}
+
+.field {
+	margin-top: 20px;
+	padding-bottom: 8px;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+	border-bottom-color: #ebebeb;
+}
+
+.field-label {
+	font-size: 12px;
+	color: #8a8a8a;
+}
+
+.field-input {
+	margin-top: 6px;
+	height: 32px;
+	font-size: 15px;
+	color: #1d1d1f;
+}
+
+.submit {
+	margin-top: 32px;
+	height: 44px;
+	border-radius: 22px;
+	background-color: #ff2442;
+	align-items: center;
+	justify-content: center;
+}
+
+.submit-text {
+	font-size: 15px;
+	font-weight: 600;
+	color: #ffffff;
+}
+
+.links {
+	flex-direction: row;
+	justify-content: space-between;
+	margin-top: 18px;
+}
+
+.link {
+	font-size: 12px;
+	color: #8a8a8a;
+}
+</style>
