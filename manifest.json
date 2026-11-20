@@ -1,7 +1,7 @@
 {
-	"name": "appx",
+	"name": "朱某的生活印记",
 	"appid": "__UNI__BF70A00",
-	"description": "",
+	"description": "没有销声匿迹，我在热爱生活",
 	"versionName": "1.0.0",
 	"versionCode": "100",
 	"uni-app-x": {
@@ -47,7 +47,13 @@
 	},
 	"app-android": {
 		"distribute": {
-			"modules": {},
+      "modules": {
+        "uni-location": {
+          "system": {}
+        },
+        "uni-barcode-scanning": {},
+        "uni-network-cronet": {}
+      },
 			"icons": {
 				"hdpi": "",
 				"xhdpi": "",
@@ -74,6 +80,7 @@
   "web": {
     "router": {
       "mode": "history"
-    }
+    },
+    "title": "朱某的生活印记"
   }
 }
